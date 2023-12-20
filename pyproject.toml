@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "spotifly"
+version = "0.1.0"
+description = ""
+authors = ["Alym Abdullayev"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+wheel = "^0.42.0"
+spotipy = "^2.23.0"
+pyqt5-qt = "^5.15.2"
+requests = "^2.31.0"
+pytube = "^15.0.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
