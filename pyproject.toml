@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "spotifly"
+name = "spotimusic"
 version = "0.1.0"
 description = ""
 authors = ["Alym Abdullayev"]
@@ -9,9 +9,12 @@ readme = "README.md"
 python = "^3.10"
 wheel = "^0.42.0"
 spotipy = "^2.23.0"
-pyqt5-qt = "^5.15.2"
 requests = "^2.31.0"
 pytube = "^15.0.0"
+fastapi = "^0.105.0"
+uvicorn = "^0.24.0.post1"
+pytest = "^7.4.3"
+pyqt6 = "^6.6.1"
 
 
 [build-system]

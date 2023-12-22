@@ -1,9 +1,8 @@
 import sys
-from app import MusicPlayer
-from PyQt5.QtWidgets import QApplication
+from gui.app import App
+from PyQt6.QtWidgets import QApplication
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    player = MusicPlayer()
-    player.show()
-    sys.exit(app.exec_())
+    window = App()
+    sys.exit(app.exec())
