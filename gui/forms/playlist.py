@@ -9,7 +9,7 @@ from PyQt6.QtGui import QIcon
 from pytube import YouTube, Search
 
 
-class Playlist(BaseLayout):
+class Playlist(QWidget):
     playlist_loaded: bool = True
     music_in_progress: bool = True
 
@@ -22,11 +22,11 @@ class Playlist(BaseLayout):
         return super().translate()
 
     def setup_ui(self):
-        self.parent.setWindowTitle('Playlist')
-        self.parent.setGeometry(600, 600, 600, 600)
+        self.setWindowTitle('Playlist')
+        self.setGeometry(600, 600, 600, 600)
 
-        self.container = QWidget(self.parent)
-        self.layout = QVBoxLayout(self.parent)
+        self.container = QWidget(self)
+        self.layout = QVBoxLayout(self)
         self.audio_control = AudioControl(self)
         self.media_control = MediaControl(self)
 
