@@ -2,3 +2,8 @@
 __py*
 tmp/*
 .cache
+*.json
+*.mp3
+*.mp4
+*cache*
+*.db

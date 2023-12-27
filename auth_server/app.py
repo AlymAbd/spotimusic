@@ -1,22 +1,20 @@
 from fastapi import FastAPI, Request
-from gui.config import AuthConfig
 import contextlib
 import time
 import threading
 import uvicorn
 from os import path
-from gui.client import spotify_oauth
+from app.client import spotify_oauth
 from fastapi.responses import HTMLResponse
 
 app = FastAPI()
 
 @app.get("/callback")
 async def root(code: str, state: str, request: Request):
-    config = AuthConfig()
     spotify_oauth.parse_auth_response_url(str(request.url))
     spotify_oauth.get_access_token(code)
-    with open(path.join(config.base_path, 'kill_thread'), 'w'):
-        pass
+    # with open(path.join(config.base_path, 'kill_thread'), 'w'):
+    #     pass
 
     html_content = """
     <html>

@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QWidget, QMainWindow
-from gui.forms import Auth, Playlist
-from gui.config import AuthConfig
+from .forms import Auth, Playlist
+from app.config import AuthConfig
 
 class App(QMainWindow):
     auth_config = AuthConfig()

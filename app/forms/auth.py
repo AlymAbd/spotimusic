@@ -1,7 +1,5 @@
-from gui.client import spotify_oauth
-from gui.forms import BaseLayout
-from auth.app import Server
-
+from app.client import spotify_oauth
+from app.forms import BaseLayout
 from datetime import datetime, timedelta
 from os import path, remove
 from PyQt6.QtWidgets import QVBoxLayout, QPushButton, QLabel

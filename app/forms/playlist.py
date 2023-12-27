@@ -1,5 +1,5 @@
-from gui.forms import BaseLayout
-from gui.client import client
+from .base import BaseLayout
+from app.client import client
 
 import os
 from PyQt6.QtWidgets import QWidget, QMainWindow, QVBoxLayout, QPushButton, QListWidget, QLabel, QHBoxLayout, QSlider, QSplitter, QListWidgetItem
