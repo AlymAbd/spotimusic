@@ -1,8 +1,7 @@
 from .base import BaseLayout
-from app.client import client
 
 import os
-from PyQt6.QtWidgets import QWidget, QMainWindow, QVBoxLayout, QPushButton, QListWidget, QLabel, QHBoxLayout, QSlider, QSplitter, QListWidgetItem
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QPushButton, QListWidget, QLabel, QHBoxLayout, QSlider, QSplitter, QListWidgetItem
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
 from PyQt6.QtCore import QUrl, Qt
 from PyQt6.QtGui import QIcon
@@ -14,6 +13,9 @@ class Playlist(QWidget):
     music_in_progress: bool = True
 
     def __init__(self, parent: QWidget) -> None:
+        from app.client import client
+        self.client = client
+
         super().__init__(parent)
         self.parent = parent
         self.setup_ui()

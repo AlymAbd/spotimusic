@@ -1,21 +1,37 @@
-from spotipy.oauth2 import SpotifyPKCE
+from spotipy.oauth2 import SpotifyPKCE, SpotifyOAuth
 from spotipy import Spotify
-import os
+from .models import Secrets
+from app import OAUTH_FILE_PATH
 
-# Spotify API credentials
-CLIENT_ID = '2845a9513fac4927bd3e4125b8a20d50'
-REDIRECT_URI = 'http://0.0.0.0:6789/callback'
-SPOTIFY_AUTH_URL = 'https://accounts.spotify.com/authorize'
-SPOTIFY_TOKEN_URL = 'https://accounts.spotify.com/api/token'
-STATE = '01bscdX9j3o4aDFyyY13zXYLbAwZB9v0'
+
+secrets = Secrets.get_first()
+secrets = secrets.load()
+
 SCOPE = 'user-read-private'
 
-spotify_oauth = SpotifyPKCE(
+CLIENT_ID = secrets.client_id
+REDIRECT_URI = secrets.redirect_uri
+STATE = secrets.state
+SPOTIFY_AUTH_URL = 'https://accounts.spotify.com/authorize'
+SPOTIFY_TOKEN_URL = 'https://accounts.spotify.com/api/token'
+
+if secrets.secret:
+    spotify_oauth = SpotifyOAuth(
+        CLIENT_ID,
+        secrets.secret,
+        REDIRECT_URI,
+        STATE,
+        SCOPE,
+        OAUTH_FILE_PATH,
+        open_browser=False
+    )
+else:
+    spotify_oauth = SpotifyPKCE(
     CLIENT_ID,
     REDIRECT_URI,
     STATE,
     SCOPE,
-    os.path.join(os.getcwd(), 'temp', 'config', 'oauth.json'),
+    OAUTH_FILE_PATH,
     open_browser=False
 )
 

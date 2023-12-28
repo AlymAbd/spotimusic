@@ -1,63 +1,95 @@
-import app.models as models
 from .models import Model
-from inspect import isclass
 from .database import db_cursor
-import re
+from app import generate_path
+from inspect import isclass
+import glob
+from os.path import isfile, basename
+from importlib import util
+from app import models
 
-class Migration(Model):
+
+MIGRATION_PATH = generate_path(pathes=('database', 'migrations'))
+
+class Migration(object):
+    model: Model = None
+
+    def __init__(self, model: Model = None) -> None:
+        if model or (self.model):
+            model = self.model
+            self.model = model()
+
     def start(self):
-        migrations = self.get_migrations()
-        for migration_name in migrations:
-            instance = self.get_instance(migration_name)
-            instance = instance()
-            if isinstance(instance, Model):
-                self.handle_table(instance)
+        exist_migrations = self._get_exist_migrations()
+        migration_path = generate_path(pathes=(MIGRATION_PATH, '*.py'))
+        migrations = [basename(f)[:-3] for f in glob.glob(migration_path)
+                            if isfile(f)
+                            and not f.endswith('__init__.py')
+                            and basename(f)[:-3] not in exist_migrations
+                    ]
+        for module_name in migrations[::-1]:
+            module = self._load_module(module_name)
+            self._handle_module_migrations(module)
 
-    def exist_table(self, model: Model):
-        sql = "SELECT name FROM sqlite_master WHERE type='table'"
-        return False
+    def _get_exist_migrations(self):
+        exist = []
+        if not self._migration_table_exist():
+            init_migration = '000_migrations'
+            module = self._load_module(init_migration)
+            self._handle_module_migrations(module)
 
-    def update_table(self, model: Model):
+        objs = models.Migration.get_all()
+        objs.select('*')
+        objs.order('date')
+        exist = objs.load(False)
+        return [x['migration_name'] for x in exist]
+
+    def _migration_table_exist(self):
+        migration_model = models.Migration()
+        data = models.SqliteMaster.get_first()
+        data.select('COUNT(*) as count')
+        data.where("type='table'", f"name='{migration_model.table_name}'")
+        data = data.load()
+        return data.count
+
+    def _load_module(self, module_name):
+        spec = util.spec_from_file_location(module_name, generate_path(MIGRATION_PATH, pathes=(module_name+'.py')))
+        module = util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    def _handle_module_migrations(self, module):
+        items = [x for x in dir(module) if not x.startswith('__') and self._check_item(module, x)]
+        for item in items:
+            item: Migration = getattr(module, item)()
+            item.migrate()
+        models.Migration.create_migration_record(module.__name__)
+
+    def _check_item(self, module, item):
+        if item == 'Migration':
+            return False
+
+        item = getattr(module, item)
+        if isclass(item):
+            item = item()
+            if isinstance(item, Migration):
+                return True
+
+    """
+    Method for manipulation with table (CREATE, UPDATE, DROP)
+    """
+    def ddl(self) -> str:
         pass
 
-    def delete_table(self, model: Model):
+    """
+    Method for manipulation with data (INSERT, DELETE, UPDATE)
+    """
+    def sql(self) -> str:
         pass
 
-    def get_migrations(self):
-        items = [x for x in dir(models) if not re.search("__", x) and self.is_class(x)]
-        return items
-
-    def is_class(self, name) -> bool:
-        name = self.get_instance(name)
-        return isclass(name)
-
-    def get_instance(self, class_name):
-        instance = getattr(models, class_name)
-        return instance
-
-    def handle_table(self, model: Model):
-        if self.exist_table(model):
-            self.update_table(model)
-        else:
-            self.create_table(model)
-
-    def create_table(self, model: Model):
-        columns = ""
-        column_names = [x.lower() for x in model.get_columns()]
-        for column_name in column_names:
-            column = getattr(model, column_name)
-            tmp = f"{column_name} {column.column_type}"
-            if column.primary_key:
-                tmp += " PRIMARY_KEY"
-            if not column.nullable:
-                tmp += " NOT NULL"
-            if column.default_value:
-                tmp += f" DEFAULT {column.default_value}"
-            columns += f"{tmp},"
-        columns = columns[:-1]
-        ddl = f"CREATE table IF NOT EXISTS {model.table_name} ({columns})"
-        db_cursor.execute(ddl)
-
-    def generate_ddl(self, columns):
-        for column in columns:
-            column = column
+    def migrate(self):
+        ddl = self.ddl()
+        sql = self.sql()
+        if ddl:
+            db_cursor.execute(ddl)
+        if sql:
+            db_cursor.execute(sql)

@@ -5,11 +5,3 @@ class Secrets(models.OneRecordModel):
     redirect_uri = models.String()
     secret = models.String()
     state = models.String()
-
-class Oauth(models.OneRecordModel):
-    access_token = models.String()
-    refresh_token = models.String()
-    token_type = models.String()
-    expires_in = models.Integer()
-    expires_at = models.Datetime()
-    scope = models.String()

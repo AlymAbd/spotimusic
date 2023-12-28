@@ -6,6 +6,7 @@ import uvicorn
 from os import path
 from app.client import spotify_oauth
 from fastapi.responses import HTMLResponse
+from app import TEMP_PATH
 
 app = FastAPI()
 
@@ -13,8 +14,8 @@ app = FastAPI()
 async def root(code: str, state: str, request: Request):
     spotify_oauth.parse_auth_response_url(str(request.url))
     spotify_oauth.get_access_token(code)
-    # with open(path.join(config.base_path, 'kill_thread'), 'w'):
-    #     pass
+    with open(path.join(TEMP_PATH, 'kill_thread'), 'w'):
+        pass
 
     html_content = """
     <html>
