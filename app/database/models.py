@@ -6,6 +6,7 @@ class Model(ABC, object):
     _onerecord: bool = False
     _type: str = ''
     _table_name: str = None
+    _primary_key: str = None
 
     def get_columns(self) -> list:
         exlude = ['table_name']
