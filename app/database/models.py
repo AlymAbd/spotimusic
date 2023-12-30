@@ -89,7 +89,7 @@ class Builder(object):
     def order(self, *orderby):
         self._ordering = orderby
 
-    def load(self, as_object = True):
+    def load(self, as_object = True) -> [] or Entity:
         empty = False
         data = []
         cur = db_cursor.execute(self._generate_sql())

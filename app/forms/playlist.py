@@ -1,67 +1,26 @@
-import os
-import asyncio
 from os import path
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QPushButton, QListWidget, QLabel, QHBoxLayout, QSlider, QSplitter, QListWidgetItem, QStyle, QGridLayout
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
-from PyQt6.QtCore import QObject, QUrl, Qt, QThread, pyqtSignal
-from PyQt6.QtGui import QIcon, QPicture, QPixmap
-from pytube import YouTube, Search
+from PyQt6.QtCore import QUrl, Qt
+from PyQt6.QtGui import QCloseEvent, QIcon, QPixmap
 from app import MUSIC_CACHE_PATH, TEMP_PATH, RESOURCE_IMAGE_PATH
-from threading import Thread
-import requests
-import threading
-
-
-class WorkerA(QThread):
-    update_signal = pyqtSignal(dict)
-
-    def __init__(self, target, *args, **kwargs) -> None:
-        super().__init__()
-        self.target = target
-        self.type = args[0] if args else None
-        self.track_data = kwargs.get('kwargs')
-        self._stop_flag = False
-
-    def run(self):
-        result = self.target(self.track_data)
-        if result:
-            match self.type:
-                case 'update_cover':
-                    self.update_signal.emit(self.track_data)
-                case 'play_track':
-                    self.update_signal.emit(self.track_data)
-        self.stop()
-
-    def stop(self):
-        self._stop_flag = True
-
-def async_download_album_cover(track_data):
-    response = requests.get(track_data['album_image_url'])
-    if response.status_code == 200:
-        with open(track_data['album_localpath'], 'wb') as file:
-            file.write(response.content)
-        return True
-
-def async_download_track(track_data):
-    file_path = path.join(MUSIC_CACHE_PATH, track_data['id'] + '.mp3')
-    if not path.isfile(file_path):
-        search = Search(track_data["name"])
-        results = search.results
-        result = results[0].watch_url
-        stream = YouTube(result)
-        stream = stream.streams.filter(only_audio=True).first()
-        stream.download(MUSIC_CACHE_PATH, track_data['id'] + '.mp3')
-        return True
+from app.workers import WorkerA
+from app.models import PlayerSettings
 
 
 class Playlist(QWidget):
     media_player = None
     audio_output = None
     client = None
+    current_volume: int = 50
+    player_settings: PlayerSettings = None
 
     def __init__(self, parent: QWidget | None) -> None:
         from app.client import client
         self.client = client
+        self.player_settings = PlayerSettings().get_first().load()
+        if self.player_settings.volume:
+            self.current_volume = self.player_settings.volume
 
         super().__init__(parent = parent)
         self.setMinimumSize(800, 600)
@@ -85,7 +44,7 @@ class Playlist(QWidget):
         self.slider_volume.setMaximumSize(150, 20)
         self.slider_volume.valueChanged.connect(self.change_volume)
         self.slider_volume.setRange(0, 100)
-        self.slider_volume.setValue(50)
+        self.slider_volume.setValue(self.current_volume)
 
         media_control_layout.addWidget(self.slider_volume)
         media_control_layout.addWidget(self.media_control, alignment=Qt.AlignmentFlag.AlignCenter)
@@ -107,6 +66,17 @@ class Playlist(QWidget):
 
     def change_volume(self, value):
         self.audio_output.setVolume(float(value/100))
+        self.current_volume = value
+
+    def closeEvent(self, event) -> None:
+        self.player_settings.set_value('volume', self.current_volume)
+        current_track_id = self.media_list.current_music.get('id')
+        current_playlist_id = self.media_list.current_playlist.get('id')
+        self.player_settings.set_value('last_playlist_id', current_playlist_id)
+        self.player_settings.set_value('last_track_id', current_track_id)
+        self.player_settings.save()
+        return super().closeEvent(event)
+
 
 class MusicList(QWidget):
     """
@@ -123,7 +93,7 @@ class PlaylistList(QWidget):
     client = None
     media_player = None
     current_music = {}
-    current_playlist = None
+    current_playlist = {}
 
     """
     Playlist, suggestions, albums
@@ -131,7 +101,6 @@ class PlaylistList(QWidget):
     def __init__(self, parent: QWidget | None) -> None:
         super().__init__(parent = parent)
 
-        self.stop_worker = threading.Event()
         self.client = parent.client
         self.media_player = parent.media_player
 
@@ -207,7 +176,7 @@ class PlaylistList(QWidget):
         file_path = path.join(MUSIC_CACHE_PATH, track_data['id'] + '.mp3')
 
         if not path.isfile(file_path):
-            self.download_worker = WorkerA(async_download_track, 'play_track', kwargs=track_data)
+            self.download_worker = WorkerA('play_track', kwargs=track_data)
             self.download_worker.update_signal.connect(self.play_selected_music)
             self.download_worker.start()
             return
@@ -225,9 +194,8 @@ class PlaylistList(QWidget):
             title = f" *caching* {title}"
         self.parent().label_current_track.setText(title)
 
-
     def download_cover(self, track_data):
-        self.download_worker = WorkerA(async_download_album_cover, 'update_cover', kwargs=track_data)
+        self.download_worker = WorkerA('update_cover', kwargs=track_data)
         self.download_worker.update_signal.connect(self.update_album_cover)
         self.download_worker.start()
 

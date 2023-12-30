@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QWidget, QMainWindow, QToolBar, QStatusBar, QWidgetAction, QLabel
+from PyQt6.QtWidgets import QMainWindow, QWidgetAction
 from .forms import Auth, Playlist, Settings
 from .config import config_exist, secret_exist, spotify_logout
 
@@ -58,3 +58,9 @@ class App(QMainWindow):
     def logout(self):
         spotify_logout()
         self.load_authpage()
+
+    def closeEvent(self, event) -> None:
+        widget = self.centralWidget()
+        if 'closeEvent' in dir(widget):
+            widget.closeEvent(event)
+        return super().closeEvent(event)
