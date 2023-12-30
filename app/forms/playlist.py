@@ -11,7 +11,7 @@ import requests
 
 
 class MultiLabelWidget(QWidget):
-    def __init__(self, big_text: list, medium_text: list, small_text: list, album_id: str = None):
+    def __init__(self, big_text: list = [], medium_text: list = [], small_text: list = [], album_id: str = None):
         super().__init__()
 
         hlayout = QHBoxLayout(self)
@@ -25,7 +25,7 @@ class MultiLabelWidget(QWidget):
             hlayout.addWidget(icon_label, alignment=Qt.AlignmentFlag.AlignRight)
 
 class TrackInfoWidget(QWidget):
-    def __init__(self, parent, big_text: list, medium_text: list, small_text: list):
+    def __init__(self, parent, big_text: list = [], medium_text: list = [], small_text: list = []):
         super().__init__()
         font_size_factor = 1.04
         vlayout = QVBoxLayout(self)
@@ -43,6 +43,7 @@ class TrackInfoWidget(QWidget):
             label = QLabel(text)
             font = label.font()
             font.setPointSizeF(font.pointSizeF() * font_size_factor)
+            font.setUnderline(True)
             label.setWordWrap(True)
             label.setFont(font)
             vlayout.addWidget(label)
@@ -155,10 +156,10 @@ class PlaylistList(QWidget):
         self.layout = QHBoxLayout()
 
         self.playlist = QListWidget()
-        self.playlist.setMinimumSize(200, 100)
+        self.playlist.setMinimumSize(250, 100)
 
         self.album_cover = QLabel()
-        self.album_cover.setMaximumSize(300, 300)
+        self.album_cover.setMaximumSize(200, 200)
 
         self.layout.addWidget(self.playlist)
         self.layout.addWidget(self.album_cover)
@@ -169,7 +170,7 @@ class PlaylistList(QWidget):
     def update_album_cover(self, track_data):
         file_path = track_data['album_localpath'] if path.isfile(track_data['album_localpath']) else path.join(RESOURCE_IMAGE_PATH, 'default_image_cover.jpeg')
         picture = QPixmap(file_path)
-        picture = picture.scaled(300, 300, aspectRatioMode=Qt.AspectRatioMode.KeepAspectRatio)
+        picture = picture.scaled(200, 200, aspectRatioMode=Qt.AspectRatioMode.KeepAspectRatio)
         self.album_cover.setPixmap(picture)
 
     def handle_click(self, item):
@@ -235,7 +236,7 @@ class PlaylistList(QWidget):
             multi_label_widget = MultiLabelWidget(
                 [track['track']['name']],
                 [track['track']['artists'][0]['name']],
-                [track['track']['album']['name']],
+                [],
                 track['track']['album']['id']
             )
             item.setSizeHint(multi_label_widget.sizeHint())
@@ -343,31 +344,25 @@ class MediaControl(QWidget):
             self.button_play_pause.setChecked(False)
 
     def media_next(self):
-        pass
+        current_index = self.grandparent.media_list.playlist.indexFromItem(self.grandparent.media_list.playlist.currentItem()).row()
+        next_index = current_index + 1
+        if (next_index + 1) > self.grandparent.media_list.playlist.count():
+            next_index = 0
+        self._change_track(next_index)
 
     def media_prev(self):
-        pass
+        current_index = self.grandparent.media_list.playlist.indexFromItem(self.grandparent.media_list.playlist.currentItem()).row()
+        next_index = current_index - 1
+        if (next_index < 0):
+            next_index = self.grandparent.media_list.playlist.count() - 1
+        self._change_track(next_index)
 
     def _change_track(self, index):
-        self.stop_music()
-        nextItem = self.music_list.item(index)
-        nextItem.setSelected(True)
-        self.music_list.setCurrentItem(nextItem)
-        self.play_selected_music(nextItem)
-
-    def next_track(self):
-        currentIndex = self.music_list.indexFromItem(self.music_list.currentItem()).row()
-        nextIndex = currentIndex + 1
-        if (nextIndex + 1) > self.music_list.count():
-            nextIndex = 0
-        self._change_track(nextIndex)
-
-    def previous_track(self):
-        currentIndex = self.music_list.indexFromItem(self.music_list.currentItem()).row()
-        nextIndex = currentIndex - 1
-        if (nextIndex < 0):
-            nextIndex = self.music_list.count() - 1
-        self._change_track(nextIndex)
+        self.grandparent.media_player.stop()
+        next_item = self.grandparent.media_list.playlist.item(index)
+        next_item.setSelected(True)
+        self.grandparent.media_list.playlist.setCurrentItem(next_item)
+        self.grandparent.media_list.handle_click(next_item)
 
     def update_current_seek_position(self):
         position = self.grandparent.media_player.position()
@@ -385,17 +380,41 @@ class TrackControl(QWidget):
         self.layout = QHBoxLayout()
 
         self.button_add = QPushButton()
-        self.button_add.setIcon(QIcon.fromTheme('emblem-favorite'))
+        self.button_add.setIcon(QIcon(Icons('interface.heart').str))
         self.button_add.setToolTip('Add to favorite')
         self.button_add.setMaximumSize(30, 30)
 
+        self.button_similar = QPushButton()
+        self.button_similar.setIcon(QIcon(Icons('interface.infinite').str))
+        self.button_similar.setToolTip('Add to favorite')
+        self.button_similar.setMaximumSize(30, 30)
+
+        self.button_shuffle = QPushButton()
+        self.button_shuffle.setIcon(QIcon(Icons('media.shuffle').str))
+        self.button_shuffle.setToolTip('Shuffle playlist')
+        self.button_shuffle.setMaximumSize(30, 30)
+
         self.button_mute = QPushButton()
         self.button_mute.setToolTip('Mute')
-        self.button_mute.setIcon(QIcon.fromTheme('audio-volume-muted'))
+        self.button_mute.setIcon(QIcon(Icons('media.volume-mute').str))
         self.button_mute.setMaximumSize(30, 30)
 
+        self.button_download_all = QPushButton()
+        self.button_download_all.setToolTip('Download all')
+        self.button_download_all.setIcon(QIcon(Icons('web.download').str))
+        self.button_download_all.setMaximumSize(30, 30)
+
+        splitter = QSplitter()
+        splitter.setOrientation(Qt.Orientation.Vertical)
+        splitter.setMinimumWidth(10)
+
         self.layout.addWidget(self.button_add)
+        self.layout.addWidget(self.button_similar)
+        self.layout.addWidget(splitter)
+        self.layout.addWidget(self.button_shuffle)
         self.layout.addWidget(self.button_mute)
+        self.layout.addWidget(splitter)
+        self.layout.addWidget(self.button_download_all)
 
         self.setLayout(self.layout)
 
