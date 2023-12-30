@@ -6,7 +6,7 @@ from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
 from PyQt6.QtCore import QObject, QUrl, Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QIcon, QPicture, QPixmap
 from pytube import YouTube, Search
-from app import MUSIC_CACHE_PATH, TEMP_PATH
+from app import MUSIC_CACHE_PATH, TEMP_PATH, RESOURCE_IMAGE_PATH
 from threading import Thread
 import requests
 import threading
@@ -28,7 +28,7 @@ class WorkerA(QThread):
             match self.type:
                 case 'update_cover':
                     self.update_signal.emit(self.track_data)
-                case _:
+                case 'play_track':
                     self.update_signal.emit(self.track_data)
         self.stop()
 
@@ -64,7 +64,7 @@ class Playlist(QWidget):
         self.client = client
 
         super().__init__(parent = parent)
-        self.setMinimumSize(550, 600)
+        self.setMinimumSize(800, 600)
         self.setGeometry(550, 600, 500, 500)
 
         self.media_player = QMediaPlayer()
@@ -106,9 +106,7 @@ class Playlist(QWidget):
         self.setLayout(self.layout)
 
     def change_volume(self, value):
-        self.audio_volume = value
-        self.audio_output.setVolume(value)
-
+        self.audio_output.setVolume(float(value/100))
 
 class MusicList(QWidget):
     """
@@ -140,9 +138,10 @@ class PlaylistList(QWidget):
         self.layout = QHBoxLayout()
 
         self.playlist = QListWidget()
-        self.playlist.setMinimumSize(100, 100)
+        self.playlist.setMinimumSize(200, 100)
 
         self.album_cover = QLabel()
+        self.album_cover.setMaximumSize(300, 300)
 
         self.layout.addWidget(self.playlist)
         self.layout.addWidget(self.album_cover)
@@ -151,11 +150,10 @@ class PlaylistList(QWidget):
         self.playlist.itemDoubleClicked.connect(self.handle_click)
 
     def update_album_cover(self, track_data):
-        picture = QPixmap()
+        file_path = track_data['album_localpath'] if path.isfile(track_data['album_localpath']) else path.join(RESOURCE_IMAGE_PATH, 'default_image_cover.jpeg')
+        picture = QPixmap(file_path)
+        picture = picture.scaled(300, 300, aspectRatioMode=Qt.AspectRatioMode.KeepAspectRatio)
         self.album_cover.setPixmap(picture)
-        if path.isfile(track_data['album_localpath']):
-            picture = QPixmap(track_data['album_localpath'])
-            self.album_cover.setPixmap(picture)
 
     def handle_click(self, item):
         item_data = item.data(Qt.ItemDataRole.UserRole)
@@ -200,8 +198,9 @@ class PlaylistList(QWidget):
         self.parent().label_current_track.setText(f'Music List ({self.playlist.count()})')
 
     def play_selected_music(self, track_data):
-        self.parent().label_current_track.setText(f'(*caching*) {track_data["name"]}')
+        self.update_music_label(track_data, 1)
         self.parent().media_control.media_stop()
+        self.playlist.setDisabled(True)
         self.update_album_cover(track_data)
         self.current_music = track_data
         self.setWindowTitle(self.current_playlist['name'] + ': ' + self.current_music['name'])
@@ -213,10 +212,19 @@ class PlaylistList(QWidget):
             self.download_worker.start()
             return
 
+        self.update_music_label(track_data)
+        self.playlist.setDisabled(False)
         self.media_player.setSource(QUrl.fromLocalFile(file_path))
         self.media_player.play()
         self.parent().label_current_track.setText(track_data["name"])
         # self.button_play_pause.setIcon(QIcon.fromTheme('media-playback-pause'))
+
+    def update_music_label(self, track_data, percentage = None):
+        title = track_data['name']
+        if percentage and percentage >= 0:
+            title = f" *caching* {title}"
+        self.parent().label_current_track.setText(title)
+
 
     def download_cover(self, track_data):
         self.download_worker = WorkerA(async_download_album_cover, 'update_cover', kwargs=track_data)
@@ -236,24 +244,28 @@ class MediaControl(QWidget):
         self.layout = QHBoxLayout()
 
         self.button_next = QPushButton()
+        self.button_next.setToolTip('Next track')
         self.button_next.setIcon(QIcon.fromTheme('media-skip-forward'))
         self.button_next.setMaximumSize(50, 50)
         self.button_next.setMinimumSize(30, 30)
         self.button_next.clicked.connect(self.media_next)
 
         self.button_prev = QPushButton()
+        self.button_prev.setToolTip('Previous track')
         self.button_prev.setIcon(QIcon.fromTheme('media-skip-backward'))
         self.button_prev.setMaximumSize(50, 50)
         self.button_prev.setMinimumSize(30, 30)
         self.button_prev.clicked.connect(self.media_prev)
 
         self.button_play_pause = QPushButton()
+        self.button_play_pause.setToolTip('Play-pause')
         self.button_play_pause.setIcon(QIcon.fromTheme('media-playback-start'))
         self.button_play_pause.setMaximumSize(60, 60)
         self.button_play_pause.setMinimumSize(35, 35)
         self.button_play_pause.clicked.connect(self.media_playpause)
 
         self.button_stop = QPushButton()
+        self.button_stop.setToolTip('Stop track')
         self.button_stop.setIcon(QIcon.fromTheme('media-playback-stop'))
         self.button_stop.setMaximumSize(60, 60)
         self.button_stop.setMinimumSize(35, 35)
@@ -317,10 +329,12 @@ class TrackControl(QWidget):
         self.layout = QHBoxLayout()
 
         self.button_add = QPushButton()
-        self.button_add.setIcon(QIcon.fromTheme('zoom-in'))
+        self.button_add.setIcon(QIcon.fromTheme('emblem-favorite'))
+        self.button_add.setToolTip('Add to favorite')
         self.button_add.setMaximumSize(30, 30)
 
         self.button_mute = QPushButton()
+        self.button_mute.setToolTip('Mute')
         self.button_mute.setIcon(QIcon.fromTheme('audio-volume-muted'))
         self.button_mute.setMaximumSize(30, 30)
 
