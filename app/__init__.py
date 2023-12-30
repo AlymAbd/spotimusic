@@ -11,7 +11,7 @@ OAUTH_FILE_PATH = path.join(TEMP_PATH, 'database', 'oauth.json')
 KILL_THREAD_PATH = path.join(TEMP_PATH, 'kill_thread')
 
 
-def generate_path(level: str = APP_PATH, pathes: tuple|str = ()) -> str:
+def generate_path(level: str = APP_PATH, pathes: tuple | str = ()) -> str:
     if isinstance(pathes, str):
         pathes = [pathes]
     return path.join(level, *pathes)

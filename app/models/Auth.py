@@ -1,5 +1,6 @@
 from ..database import models
 
+
 class Secrets(models.OneRecordModel):
     _primary_key = 'client_id'
 

@@ -27,12 +27,12 @@ if secrets.secret:
     )
 else:
     spotify_oauth = SpotifyPKCE(
-    CLIENT_ID,
-    REDIRECT_URI,
-    STATE,
-    SCOPE,
-    OAUTH_FILE_PATH,
-    open_browser=False
-)
+        CLIENT_ID,
+        REDIRECT_URI,
+        STATE,
+        SCOPE,
+        OAUTH_FILE_PATH,
+        open_browser=False
+    )
 
 client = Spotify(auth_manager=spotify_oauth)

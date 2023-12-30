@@ -1,6 +1,7 @@
 from app import RESOURCE_ICON_PATH
 from os import path
 
+
 class Icons(object):
     _fpath = ''
 

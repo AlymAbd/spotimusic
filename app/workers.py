@@ -41,7 +41,8 @@ class WorkerA(QThread):
     def download_track(self, track_data):
         file_path = path.join(MUSIC_CACHE_PATH, track_data['id'] + '.mp3')
         if not path.isfile(file_path):
-            search = Search(track_data["main_artist_name"] + ": " + track_data["name"])
+            search = Search(
+                track_data["main_artist_name"] + ": " + track_data["name"])
             results = search.results
             result = results[0].watch_url
             stream = YouTube(result)

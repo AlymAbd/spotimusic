@@ -10,6 +10,7 @@ from app import TEMP_PATH
 
 app = FastAPI()
 
+
 @app.get("/callback")
 async def root(code: str, state: str, request: Request):
     spotify_oauth.parse_auth_response_url(str(request.url))

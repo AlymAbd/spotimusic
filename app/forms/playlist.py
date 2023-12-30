@@ -15,14 +15,19 @@ class MultiLabelWidget(QWidget):
         super().__init__()
 
         hlayout = QHBoxLayout(self)
-        self.track_info = TrackInfoWidget(self, big_text, medium_text, small_text)
+        self.track_info = TrackInfoWidget(
+            self, big_text, medium_text, small_text)
         hlayout.addWidget(self.track_info)
 
         if album_id:
-            icon_path = path.join(TEMP_PATH, 'images', path.join(album_id) + '.jpg') if path.isfile(path.join(TEMP_PATH, 'images', path.join(album_id) + '.jpg')) else path.join(RESOURCE_IMAGE_PATH, 'default_image_cover.jpeg')
+            icon_path = path.join(TEMP_PATH, 'images', path.join(album_id) + '.jpg') if path.isfile(path.join(
+                TEMP_PATH, 'images', path.join(album_id) + '.jpg')) else path.join(RESOURCE_IMAGE_PATH, 'default_image_cover.jpeg')
             icon_label = QLabel()
-            icon_label.setPixmap(QIcon(icon_path).pixmap(40, 40))  # Adjust the size as needed
-            hlayout.addWidget(icon_label, alignment=Qt.AlignmentFlag.AlignRight)
+            icon_label.setPixmap(QIcon(icon_path).pixmap(
+                40, 40))  # Adjust the size as needed
+            hlayout.addWidget(
+                icon_label, alignment=Qt.AlignmentFlag.AlignRight)
+
 
 class TrackInfoWidget(QWidget):
     def __init__(self, parent, big_text: list = [], medium_text: list = [], small_text: list = []):
@@ -36,7 +41,8 @@ class TrackInfoWidget(QWidget):
             font.setPointSizeF(font.pointSizeF() * font_size_factor)
             label.setFont(font)
             label.setWordWrap(True)
-            label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+            label.setSizePolicy(QSizePolicy.Policy.Expanding,
+                                QSizePolicy.Policy.Preferred)
             vlayout.addWidget(label)
 
         for text in medium_text:
@@ -71,7 +77,7 @@ class Playlist(QWidget):
         if self.player_settings.volume:
             self.current_volume = self.player_settings.volume
 
-        super().__init__(parent = parent)
+        super().__init__(parent=parent)
         self.setMinimumSize(800, 600)
         self.setGeometry(550, 600, 500, 500)
 
@@ -96,8 +102,10 @@ class Playlist(QWidget):
         self.slider_volume.setValue(self.current_volume)
 
         media_control_layout.addWidget(self.slider_volume)
-        media_control_layout.addWidget(self.media_control, alignment=Qt.AlignmentFlag.AlignCenter)
-        media_control_layout.addWidget(self.track_control, alignment=Qt.AlignmentFlag.AlignRight)
+        media_control_layout.addWidget(
+            self.media_control, alignment=Qt.AlignmentFlag.AlignCenter)
+        media_control_layout.addWidget(
+            self.track_control, alignment=Qt.AlignmentFlag.AlignRight)
 
         media_control_widget.setLayout(media_control_layout)
 
@@ -107,9 +115,12 @@ class Playlist(QWidget):
         self.layout.addWidget(self.label_main)
         self.layout.addWidget(self.media_list)
         self.layout.addWidget(QSplitter())
-        self.layout.addWidget(self.label_current_track, alignment=Qt.AlignmentFlag.AlignBottom)
-        self.layout.addWidget(media_control_widget, alignment=Qt.AlignmentFlag.AlignBottom)
-        self.layout.addWidget(self.audio_control, alignment=Qt.AlignmentFlag.AlignBottom)
+        self.layout.addWidget(self.label_current_track,
+                              alignment=Qt.AlignmentFlag.AlignBottom)
+        self.layout.addWidget(media_control_widget,
+                              alignment=Qt.AlignmentFlag.AlignBottom)
+        self.layout.addWidget(self.audio_control,
+                              alignment=Qt.AlignmentFlag.AlignBottom)
 
         self.setLayout(self.layout)
 
@@ -131,12 +142,14 @@ class MusicList(QWidget):
     """
     Track list
     """
+
     def __init__(self, parent: QWidget | None) -> None:
-        super().__init__(parent = parent)
+        super().__init__(parent=parent)
         self.layout = QVBoxLayout()
         self.playlist = QListWidget()
         self.layout.addWidget(self.playlist)
         self.setLayout(self.layout)
+
 
 class PlaylistList(QWidget):
     client = None
@@ -147,8 +160,9 @@ class PlaylistList(QWidget):
     """
     Playlist, suggestions, albums
     """
+
     def __init__(self, parent: QWidget | None) -> None:
-        super().__init__(parent = parent)
+        super().__init__(parent=parent)
 
         self.client = parent.client
         self.media_player = parent.media_player
@@ -168,9 +182,11 @@ class PlaylistList(QWidget):
         self.playlist.itemDoubleClicked.connect(self.handle_click)
 
     def update_album_cover(self, track_data):
-        file_path = track_data['album_localpath'] if path.isfile(track_data['album_localpath']) else path.join(RESOURCE_IMAGE_PATH, 'default_image_cover.jpeg')
+        file_path = track_data['album_localpath'] if path.isfile(
+            track_data['album_localpath']) else path.join(RESOURCE_IMAGE_PATH, 'default_image_cover.jpeg')
         picture = QPixmap(file_path)
-        picture = picture.scaled(200, 200, aspectRatioMode=Qt.AspectRatioMode.KeepAspectRatio)
+        picture = picture.scaled(
+            200, 200, aspectRatioMode=Qt.AspectRatioMode.KeepAspectRatio)
         self.album_cover.setPixmap(picture)
 
     def handle_click(self, item):
@@ -178,7 +194,8 @@ class PlaylistList(QWidget):
 
         match item_data['type']:
             case 'track':
-                item_data['album_localpath'] = path.join(TEMP_PATH, 'images', item_data['album_id'] + '.jpg')
+                item_data['album_localpath'] = path.join(
+                    TEMP_PATH, 'images', item_data['album_id'] + '.jpg')
                 if not path.isfile(item_data['album_localpath']):
                     self.download_cover(item_data)
                 self.play_selected_music(item_data)
@@ -192,7 +209,8 @@ class PlaylistList(QWidget):
         self.playlist.clear()
         for playlist in result['items']:
             item = QListWidgetItem()
-            item.setData(Qt.ItemDataRole.UserRole, {'id': playlist['id'], 'type': 'playlist'})
+            item.setData(Qt.ItemDataRole.UserRole, {
+                         'id': playlist['id'], 'type': 'playlist'})
 
             item.setData(Qt.ItemDataRole.UserRole, {
                 'id': playlist['id'],
@@ -200,7 +218,8 @@ class PlaylistList(QWidget):
                 'type': 'playlist',
             })
 
-            playlist_image = path.join(TEMP_PATH, 'images', playlist['id'] + '.jpg')
+            playlist_image = path.join(
+                TEMP_PATH, 'images', playlist['id'] + '.jpg')
             if not path.isfile(playlist_image):
                 response = requests.get(playlist['images'][0]['url'])
                 if response.status_code == 200:
@@ -243,7 +262,8 @@ class PlaylistList(QWidget):
             self.playlist.addItem(item)
             self.playlist.setItemWidget(item, multi_label_widget)
 
-        self.parent().label_current_track.setText(f'Music List ({self.playlist.count()})')
+        self.parent().label_current_track.setText(
+            f'Music List ({self.playlist.count()})')
 
     def play_selected_music(self, track_data):
         self.update_music_label(track_data, 1)
@@ -251,12 +271,14 @@ class PlaylistList(QWidget):
         self.playlist.setDisabled(True)
         self.update_album_cover(track_data)
         self.current_music = track_data
-        self.setWindowTitle(self.current_playlist['name'] + ': ' + self.current_music['name'])
+        self.setWindowTitle(
+            self.current_playlist['name'] + ': ' + self.current_music['name'])
         file_path = path.join(MUSIC_CACHE_PATH, track_data['id'] + '.mp3')
 
         if not path.isfile(file_path):
             self.download_worker = WorkerA('play_track', kwargs=track_data)
-            self.download_worker.update_signal.connect(self.play_selected_music)
+            self.download_worker.update_signal.connect(
+                self.play_selected_music)
             self.download_worker.start()
             return
 
@@ -265,7 +287,7 @@ class PlaylistList(QWidget):
         self.media_player.setSource(QUrl.fromLocalFile(file_path))
         self.parent().media_control.media_playpause(True)
 
-    def update_music_label(self, track_data, percentage = None):
+    def update_music_label(self, track_data, percentage=None):
         title = track_data['name']
         if percentage and percentage >= 0:
             title = f" *caching* {title}"
@@ -283,8 +305,9 @@ class MediaControl(QWidget):
     """
     Buttons next, prev, play, pause, stop, add/remove to favorite
     """
+
     def __init__(self, parent: QWidget | None) -> None:
-        super().__init__(parent = parent)
+        super().__init__(parent=parent)
         self.grandparent = parent.parent()
         self.layout = QHBoxLayout()
 
@@ -344,14 +367,16 @@ class MediaControl(QWidget):
             self.button_play_pause.setChecked(False)
 
     def media_next(self):
-        current_index = self.grandparent.media_list.playlist.indexFromItem(self.grandparent.media_list.playlist.currentItem()).row()
+        current_index = self.grandparent.media_list.playlist.indexFromItem(
+            self.grandparent.media_list.playlist.currentItem()).row()
         next_index = current_index + 1
         if (next_index + 1) > self.grandparent.media_list.playlist.count():
             next_index = 0
         self._change_track(next_index)
 
     def media_prev(self):
-        current_index = self.grandparent.media_list.playlist.indexFromItem(self.grandparent.media_list.playlist.currentItem()).row()
+        current_index = self.grandparent.media_list.playlist.indexFromItem(
+            self.grandparent.media_list.playlist.currentItem()).row()
         next_index = current_index - 1
         if (next_index < 0):
             next_index = self.grandparent.media_list.playlist.count() - 1
@@ -367,15 +392,17 @@ class MediaControl(QWidget):
     def update_current_seek_position(self):
         position = self.grandparent.media_player.position()
         self.grandparent.audio_control.slider_position.setValue(position)
-        self.grandparent.audio_control.label.setText(f'{self.format_time(position)} / {self.format_time(self.grandparent.media_player.duration())}')
+        self.grandparent.audio_control.label.setText(
+            f'{self.format_time(position)} / {self.format_time(self.grandparent.media_player.duration())}')
 
     def format_time(self, milliseconds):
         minutes, seconds = divmod(milliseconds // 1000, 60)
         return f'{minutes:02d}:{seconds:02d}'
 
+
 class TrackControl(QWidget):
     def __init__(self, parent: QWidget | None) -> None:
-        super().__init__(parent = parent)
+        super().__init__(parent=parent)
 
         self.layout = QHBoxLayout()
 
@@ -418,12 +445,14 @@ class TrackControl(QWidget):
 
         self.setLayout(self.layout)
 
+
 class AudioControl(QWidget):
     """
     Track position, track info
     """
+
     def __init__(self, parent: QWidget | None) -> None:
-        super().__init__(parent = parent)
+        super().__init__(parent=parent)
         self.layout = QHBoxLayout()
         self.label = QLabel('00:00 | 00:00')
         self.slider_position = QSlider(Qt.Orientation.Horizontal)

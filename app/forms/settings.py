@@ -3,6 +3,7 @@ from app.util import random_string
 from app.models import Secrets
 from app.database.entity import Entity
 
+
 class Settings(QWidget):
     data: dict = {}
     obj: Entity = None
@@ -57,20 +58,24 @@ class Form(QWidget):
 
         self.input_client_id = QLineEdit(self)
         self.input_client_id.setText(self.parent().data.get('client_id'))
-        self.layout.addWidget(self.create_labeled_input('Client ID*', self.input_client_id))
+        self.layout.addWidget(self.create_labeled_input(
+            'Client ID*', self.input_client_id))
 
         self.input_secret = QLineEdit(self)
         self.input_secret.setText(self.parent().data.get('secret'))
-        self.layout.addWidget(self.create_labeled_input('Secret', self.input_secret))
+        self.layout.addWidget(self.create_labeled_input(
+            'Secret', self.input_secret))
 
         self.input_redirect_uri = QLineEdit(self)
         self.input_redirect_uri.setText(self.parent().data.get('redirect_uri'))
-        self.layout.addWidget(self.create_labeled_input('Redirect URL', self.input_redirect_uri))
+        self.layout.addWidget(self.create_labeled_input(
+            'Redirect URL', self.input_redirect_uri))
 
         self.input_state = QLineEdit(self)
         self.input_state.setText(self.parent().data.get('state'))
         self.input_state.setReadOnly(True)
-        self.layout.addWidget(self.create_labeled_input('State', self.input_state))
+        self.layout.addWidget(
+            self.create_labeled_input('State', self.input_state))
 
         self.setLayout(self.layout)
         parent.layout.addWidget(self)
@@ -83,4 +88,3 @@ class Form(QWidget):
         layout.addWidget(label)
         layout.addWidget(input_widget)
         return widget
-

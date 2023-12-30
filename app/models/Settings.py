@@ -1,5 +1,6 @@
 from ..database import models
 
+
 class UserSettings(models.OneRecordModel):
     """
     Settings in gui

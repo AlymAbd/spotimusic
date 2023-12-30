@@ -14,6 +14,7 @@ from app import KILL_THREAD_PATH
 # minutes
 TIMEOUT = 1
 
+
 class Auth(QWidget):
     def __init__(self, parent) -> None:
         super().__init__(parent)
@@ -46,7 +47,8 @@ class Auth(QWidget):
             # start auth callback web-server
 
             timeout_time = datetime.now() + timedelta(minutes=TIMEOUT)
-            config = uvicorn.Config("auth_server.app:app", host="0.0.0.0", port=6789, log_level="info")
+            config = uvicorn.Config(
+                "auth_server.app:app", host="0.0.0.0", port=6789, log_level="info")
             server = Server(config=config)
 
             with server.run_in_thread():
@@ -56,7 +58,8 @@ class Auth(QWidget):
 
                 while not path.exists(KILL_THREAD_PATH):
                     if datetime.now() > timeout_time:
-                        self.label_auth_status.setText("Timeout... try again...")
+                        self.label_auth_status.setText(
+                            "Timeout... try again...")
                         print('timeout... shutting down...')
                         break
                     time.sleep(5)
@@ -65,7 +68,8 @@ class Auth(QWidget):
                     remove(KILL_THREAD_PATH)
                     self.parent.load_playlist()
                 else:
-                    self.label_auth_status.setText("Something went wrong, please try again later")
+                    self.label_auth_status.setText(
+                        "Something went wrong, please try again later")
         else:
             self.parent.load_playlist()
 

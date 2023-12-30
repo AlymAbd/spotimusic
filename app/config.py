@@ -8,11 +8,14 @@ def secret_exist():
     secrets = secrets.load()
     return secrets.client_id
 
+
 def config_exist():
     return path.isfile(OAUTH_FILE_PATH)
 
+
 def kill_thread():
     return path.isfile(KILL_THREAD_PATH)
+
 
 def spotify_logout():
     return remove(OAUTH_FILE_PATH)

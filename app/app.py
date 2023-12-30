@@ -2,6 +2,7 @@ from PyQt6.QtWidgets import QMainWindow, QWidgetAction
 from .forms import Auth, Playlist, Settings
 from .config import config_exist, secret_exist, spotify_logout
 
+
 class App(QMainWindow):
     def __init__(self):
         super().__init__()
