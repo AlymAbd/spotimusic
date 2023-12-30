@@ -4,27 +4,45 @@ class Entity(object):
     model = None
     pk: str = None
     values = {}
+    old_values = {}
+    is_new = False
 
-    def __init__(self, model) -> None:
+    def __init__(self, model, is_new = False) -> None:
+        self.values = {}
+        self.old_values = {}
+        self.pk = None
+        self.model = model
+        self.is_new = is_new
+
         if callable(model):
             self.model = model()
 
     def save(self):
         cur = db_cursor.execute(self._get_sql())
         database.commit()
-        if self.model.primary_key:
-            self.pk = self.values[self.model.primary_key] = cur.lastrowid
+        if self.model._primary_key:
+            self.pk = self.values[self.model._primary_key] = cur.lastrowid
         return self.values
 
     def _serialize_to_save(self, column, value):
         pass
 
-    def delete(self):
-        pass
+    def delete(self, id = None, custom: str = None):
+        sql = f"DELETE FROM {self.model.table_name}"
+        if custom:
+            sql += f" WHERE {custom}"
+        if id:
+            sql += f" WHERE {self.model._primary_key}={id}"
+        sql += ";"
+        db_cursor.execute(sql)
+        database.commit()
+        return True
 
     def set_value(self, column, value):
         setattr(self, column, value)
         self.values[column] = value
+        if not column in self.old_values.keys():
+            self.old_values[column] = value
 
     """
     Data list of array
@@ -38,9 +56,9 @@ class Entity(object):
         from app.database.models import OneRecordModel
 
         res = ""
-        if self.pk:
+        if self.pk and not self.is_new:
             res = self._generate_update_sql()
-        elif isinstance(self.model, OneRecordModel):
+        elif isinstance(self.model, OneRecordModel) and not self.is_new:
             res = self._generate_onerow_update_sql()
         else:
             res = self._generate_insert_sql()
@@ -64,10 +82,7 @@ class Entity(object):
         return f"UPDATE {self.model.table_name} SET {values} WHERE {self.model.primary_key}={self.pk};"
 
     def _generate_onerow_update_sql(self):
-        values = ""
-        columns = self.model.get_columns()
-        for column in columns:
-            values += f"'{str(self.values[column])}',"
-        values = values[:-1]
-        columns = ", ".join([str(x) for x in columns])
-        return f"INSERT INTO {self.model.table_name} ({columns}) VALUES ({values});"
+        self.delete()
+        cur = db_cursor.execute(self._generate_insert_sql())
+        database.commit()
+        return cur.lastrowid

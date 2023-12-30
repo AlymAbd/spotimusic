@@ -48,8 +48,8 @@ class Migration(object):
         data = models.SqliteMaster.get_first()
         data.select('COUNT(*) as count')
         data.where("type='table'", f"name='{migration_model.table_name}'")
-        data = data.load()
-        return data.count
+        data = data.load().count
+        return data
 
     def _load_module(self, module_name):
         spec = util.spec_from_file_location(module_name, generate_path(MIGRATION_PATH, pathes=(module_name+'.py')))

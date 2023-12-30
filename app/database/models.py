@@ -23,7 +23,7 @@ class Model(ABC, object):
 
     @classmethod
     def new_object(cls) -> Entity:
-        obj = Entity(cls)
+        obj = Entity(cls, is_new=True)
         return obj
 
     @classmethod
@@ -90,18 +90,22 @@ class Builder(object):
         self._ordering = orderby
 
     def load(self, as_object = True):
+        empty = False
         data = []
         cur = db_cursor.execute(self._generate_sql())
         rows = cur.fetchall()
         columns = [(x[0], x[1][0]) for x in enumerate(cur.description)]
         if not rows:
             rows = [[None for x in columns]]
+            empty = True
 
         for row in rows:
             row = [(col, row[i]) for i, col in columns]
             if as_object:
                 obj = Entity(self.model)
                 obj.set_data(row)
+                if empty:
+                    obj.is_new = True
                 data.append(obj)
             else:
                 values = {}

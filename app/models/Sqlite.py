@@ -7,4 +7,3 @@ class SqliteMaster(models.Model):
     name = models.String()
     tbl_name = models.String()
     rootpage = models.String()
-

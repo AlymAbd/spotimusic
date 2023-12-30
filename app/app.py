@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QWidget, QMainWindow, QToolBar, QStatusBar, QWidgetAction, QLabel
 from .forms import Auth, Playlist, Settings
-from .config import config_exist, secret_exist
+from .config import config_exist, secret_exist, spotify_logout
 
 class App(QMainWindow):
     def __init__(self):
@@ -17,6 +17,7 @@ class App(QMainWindow):
 
         action_logout = QWidgetAction(self)
         action_logout.setText("Logout")
+        action_logout.triggered.connect(self.logout)
 
         action_exit = QWidgetAction(self)
         action_exit.setText("Exit")
@@ -53,3 +54,7 @@ class App(QMainWindow):
     def load_authpage(self):
         central_widget = Auth(self)
         self.setCentralWidget(central_widget)
+
+    def logout(self):
+        spotify_logout()
+        self.load_authpage()

@@ -17,6 +17,9 @@ TIMEOUT = 1
 class Auth(QWidget):
     def __init__(self, parent) -> None:
         super().__init__(parent)
+        self.parent = parent
+        if callable(parent):
+            self.parent = parent()
 
         self.layout = QVBoxLayout()
         self.setLayout(self.layout)
@@ -49,19 +52,21 @@ class Auth(QWidget):
             with server.run_in_thread():
                 uri = spotify_oauth.get_authorize_url()
                 webbrowser.open(uri)
+                self.label_auth_status.setText(f"Timeout is :{timeout_time}")
 
                 while not path.exists(KILL_THREAD_PATH):
                     if datetime.now() > timeout_time:
                         self.label_auth_status.setText("Timeout... try again...")
                         print('timeout... shutting down...')
+                        break
                     time.sleep(5)
 
                 if path.exists(KILL_THREAD_PATH):
                     remove(KILL_THREAD_PATH)
-                    self.parent.show_playlist()
+                    self.parent.load_playlist()
                 else:
                     self.label_auth_status.setText("Something went wrong, please try again later")
         else:
-            self.parent.show_playlist()
+            self.parent.load_playlist()
 
         self.button_login.setVisible(False)

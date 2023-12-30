@@ -7,3 +7,6 @@ tmp/*
 *.mp4
 *cache*
 *.db
+temp/database/*
+temp/images/*
+temp/tracks/*

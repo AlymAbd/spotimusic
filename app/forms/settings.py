@@ -1,19 +1,21 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLabel, QHBoxLayout, QLineEdit, QFormLayout, QGridLayout, QTabWidget, QLineEdit, QDateEdit, QPushButton
 from app.util import random_string
 from app.models import Secrets
+from app.database.entity import Entity
 
 class Settings(QWidget):
     data: dict = {}
+    obj: Entity = None
 
     def __init__(self, parent):
         super().__init__(parent=parent)
-        client_settings = Secrets.get_first()
-        self.data = client_settings.load(False)
+        self.obj = Secrets.get_first().load()
+        self.data = self.obj.values
 
         if not self.data.get('state'):
             self.data['state'] = random_string(25)
         if not self.data.get('redirect_uri'):
-            self.data['redirect_uri'] = 'http://0.0.0.0:6789'
+            self.data['redirect_uri'] = 'http://0.0.0.0:6789/callback'
 
         self.setWindowTitle('Player settings')
         self.add_inputs()
@@ -37,16 +39,14 @@ class Settings(QWidget):
         redirect_uri = self.form_input.input_redirect_uri.text()
         secret = self.form_input.input_secret.text()
         state = self.form_input.input_state.text()
-        obj = Secrets.new_object()
-        obj.set_value('client_id', client_id)
-        obj.set_value('redirect_uri', redirect_uri)
-        obj.set_value('secret', secret)
-        obj.set_value('state', state)
-        obj.save()
+        self.obj.set_value('client_id', client_id)
+        self.obj.set_value('redirect_uri', redirect_uri)
+        self.obj.set_value('secret', secret)
+        self.obj.set_value('state', state)
+        self.obj.save()
 
     def click_back(self):
-        self.parent().load_authpage()
-        self.close()
+        self.parent().load_page()
 
 
 class Form(QWidget):
