@@ -83,6 +83,4 @@ class Entity(object):
 
     def _generate_onerow_update_sql(self):
         self.delete()
-        cur = db_cursor.execute(self._generate_insert_sql())
-        database.commit()
-        return cur.lastrowid
+        return self._generate_insert_sql()
