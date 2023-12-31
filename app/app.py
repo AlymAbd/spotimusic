@@ -1,11 +1,15 @@
 from PyQt6.QtWidgets import QMainWindow, QWidgetAction
 from .forms import Auth, Playlist, Settings
 from .config import config_exist, secret_exist, spotify_logout
+from PyQt6.QtGui import QPixmap, QIcon
+from app.icons import Icons
 
 
 class App(QMainWindow):
     def __init__(self):
         super().__init__()
+
+        self.setWindowIcon(QIcon(Icons('interface.music').str))
 
         action_home = QWidgetAction(self)
         action_home.setText("Home page")
