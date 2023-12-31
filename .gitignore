@@ -1,7 +1,6 @@
 *env*
 __py*
 tmp/*
-.cache
 *.json
 *.mp3
 *.mp4

@@ -1,0 +1,11 @@
+{
+    "recommendations": [
+        "njpwerner.autodocstring",
+        "ms-python.autopep8",
+        "editorconfig.editorconfig",
+        "ms-python.vscode-pylance",
+        "ms-python.python",
+        "donjayamanne.python-environment-manager",
+        "kevinrose.vsc-python-indent"
+    ]
+}
