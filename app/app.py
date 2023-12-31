@@ -3,6 +3,7 @@ from .forms import Auth, Playlist, Settings
 from .config import config_exist, secret_exist, spotify_logout
 from PyQt6.QtGui import QPixmap, QIcon
 from app.icons import Icons
+from app import client
 
 
 class App(QMainWindow):
@@ -43,6 +44,8 @@ class App(QMainWindow):
     def load_page(self):
         if not secret_exist():
             self.load_settings()
+        elif client.is_expired():
+            self.load_authpage()
         elif config_exist():
             self.load_playlist()
         else:

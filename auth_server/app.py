@@ -4,7 +4,7 @@ import time
 import threading
 import uvicorn
 from os import path
-from app.client import spotify_oauth
+from app import client
 from fastapi.responses import HTMLResponse
 from app import TEMP_PATH
 
@@ -13,8 +13,8 @@ app = FastAPI()
 
 @app.get("/callback")
 async def root(code: str, state: str, request: Request):
-    spotify_oauth.parse_auth_response_url(str(request.url))
-    spotify_oauth.get_access_token(code)
+    client.spotify_oauth.parse_auth_response_url(str(request.url))
+    client.spotify_oauth.get_access_token(code)
     with open(path.join(TEMP_PATH, 'kill_thread'), 'w'):
         pass
 

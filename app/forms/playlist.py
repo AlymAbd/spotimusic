@@ -24,6 +24,7 @@ class TopPlaylistBar(QWidget):
             QIcon(Icons('direction.arrow-left-circle').str))
         self.button_back.setMaximumWidth(40)
         self.button_back.clicked.connect(self.handle_back_button)
+        self.button_back.setHidden(True)
 
         self.layout.addWidget(
             self.button_back, alignment=Qt.AlignmentFlag.AlignLeft
@@ -36,6 +37,7 @@ class TopPlaylistBar(QWidget):
 
     def handle_back_button(self):
         self.parent().media_list.render_playlists()
+        self.button_back.setHidden(True)
 
 
 class Playlist(QWidget):
@@ -46,11 +48,11 @@ class Playlist(QWidget):
     player_settings: PlayerSettings = None
 
     def __init__(self, parent: QWidget | None) -> None:
-        from app.client import client
+        from app import client
 
         super().__init__(parent=parent)
 
-        self.client = client
+        self.client = client.spotify
         self.player_settings = PlayerSettings().get_first().load()
         if self.player_settings.volume:
             self.current_volume = self.player_settings.volume
@@ -68,8 +70,11 @@ class Playlist(QWidget):
 
         media_control_widget = QWidget(self)
         media_control_layout = QHBoxLayout()
+
         self.media_control = MediaControl(media_control_widget)
         self.track_control = TrackControl(media_control_widget)
+        self.media_list = PlaylistList(self)
+        self.audio_control = AudioControl(self)
 
         self.slider_volume = QSlider(Qt.Orientation.Horizontal)
         self.slider_volume.setMinimumSize(50, 20)
@@ -85,9 +90,6 @@ class Playlist(QWidget):
             self.track_control, alignment=Qt.AlignmentFlag.AlignRight)
 
         media_control_widget.setLayout(media_control_layout)
-
-        self.media_list = PlaylistList(self)
-        self.audio_control = AudioControl(self)
 
         self.label_current_track = QLabel('...')
 
@@ -165,7 +167,11 @@ class PlaylistList(QWidget):
                 if not path.isfile(item_data['album_localpath']):
                     self.download_cover(item_data)
                 self.play_selected_music(item_data)
+            case 'favorite':
+                self.load_favorite(item_data)
+                self.parent().top_bar.button_back.setHidden(False)
             case 'playlist':
+                self.parent().top_bar.button_back.setHidden(False)
                 self.load_playlist(item_data)
             case _:
                 self.render_playlists()
@@ -174,10 +180,29 @@ class PlaylistList(QWidget):
         self.parent().top_bar.label_main.setText('Playlists')
         result = self.client.current_user_playlists()
         self.playlist.clear()
+
+        multi_label_widget = MultiLabelWidget(
+            big_text=['Favorite'],
+            medium_text=[],
+            small_text=['Your favorite track'],
+            album_id='',
+            delimiter=True
+        )
+        item = QListWidgetItem()
+        item.setData(Qt.ItemDataRole.UserRole, {
+            'id': 0,
+            'name': 'Favorite',
+            'type': 'favorite'
+        })
+        item.setSizeHint(multi_label_widget.sizeHint())
+        self.playlist.addItem(item)
+        self.playlist.setItemWidget(item, multi_label_widget)
+
         for playlist in result['items']:
             item = QListWidgetItem()
             item.setData(Qt.ItemDataRole.UserRole, {
-                         'id': playlist['id'], 'type': 'playlist'})
+                'id': playlist['id'], 'type': 'playlist'
+            })
 
             item.setData(Qt.ItemDataRole.UserRole, {
                 'id': playlist['id'],
@@ -205,12 +230,19 @@ class PlaylistList(QWidget):
             self.playlist.setItemWidget(item, multi_label_widget)
 
     def load_playlist(self, playlist_data):
+        result = self.client.playlist_tracks(playlist_data['id'])
+        self.render_tracks(playlist_data, result)
+
+    def load_favorite(self, data):
+        result = self.client.current_user_saved_tracks()
+        self.render_tracks(data, result)
+
+    def render_tracks(self, playlist_data, result):
         self.parent().top_bar.label_main.setText(
             f"Playlist: {playlist_data['name']}")
 
         self.current_playlist = playlist_data
         self.setWindowTitle(playlist_data['name'])
-        result = self.client.playlist_tracks(playlist_data['id'])
         self.playlist.clear()
         for track in result['items']:
             item = QListWidgetItem()

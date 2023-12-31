@@ -38,12 +38,12 @@ class Auth(QWidget):
         self.layout.addWidget(self.label_auth_status)
 
     def handle_auth(self):
-        from app.client import spotify_oauth
+        from app import client
         from auth_server.app import Server
 
         self.button_login.setDisabled(True)
         # double auth check
-        if not config_exist():
+        if client.is_expired():
             # start auth callback web-server
 
             timeout_time = datetime.now() + timedelta(minutes=TIMEOUT)
@@ -52,7 +52,7 @@ class Auth(QWidget):
             server = Server(config=config)
 
             with server.run_in_thread():
-                uri = spotify_oauth.get_authorize_url()
+                uri = client.spotify_oauth.get_authorize_url()
                 webbrowser.open(uri)
                 self.label_auth_status.setText(f"Timeout is :{timeout_time}")
 
