@@ -9,7 +9,9 @@ from app.workers import WorkerA
 from app.models import PlayerSettings
 from app.icons import Icons
 from app.forms.multilabel import MultiLabelWidget
-from app.forms.media_control import MediaControl, TrackControl, AudioControl
+from app.forms.media_control import MediaControl
+from app.forms.current_track import CurrentTrack
+from spotipy import Spotify
 
 
 class TopPlaylistBar(QWidget):
@@ -43,7 +45,7 @@ class TopPlaylistBar(QWidget):
 class Playlist(QWidget):
     media_player = None
     audio_output = None
-    client = None
+    client: Spotify = None
     current_volume: int = 50
     player_settings: PlayerSettings = None
 
@@ -52,7 +54,7 @@ class Playlist(QWidget):
 
         super().__init__(parent=parent)
 
-        self.client = client.spotify
+        self.client: Spotify = client.spotify
         self.player_settings = PlayerSettings().get_first().load()
         if self.player_settings.volume:
             self.current_volume = self.player_settings.volume
@@ -71,23 +73,15 @@ class Playlist(QWidget):
         media_control_widget = QWidget(self)
         media_control_layout = QHBoxLayout()
 
-        self.media_control = MediaControl(media_control_widget)
-        self.track_control = TrackControl(media_control_widget)
         self.media_list = PlaylistList(self)
+        self.media_control = MediaControl(media_control_widget)
+        self.volume_control = VolumeControl(media_control_widget)
         self.audio_control = AudioControl(self)
 
-        self.slider_volume = QSlider(Qt.Orientation.Horizontal)
-        self.slider_volume.setMinimumSize(50, 20)
-        self.slider_volume.setMaximumSize(150, 20)
-        self.slider_volume.valueChanged.connect(self.change_volume)
-        self.slider_volume.setRange(0, 100)
-        self.slider_volume.setValue(self.current_volume)
-
-        media_control_layout.addWidget(self.slider_volume)
+        media_control_layout.addWidget(
+            self.audio_control, alignment=Qt.AlignmentFlag.AlignRight)
         media_control_layout.addWidget(
             self.media_control, alignment=Qt.AlignmentFlag.AlignCenter)
-        media_control_layout.addWidget(
-            self.track_control, alignment=Qt.AlignmentFlag.AlignRight)
 
         media_control_widget.setLayout(media_control_layout)
 
@@ -105,10 +99,6 @@ class Playlist(QWidget):
 
         self.setLayout(self.layout)
 
-    def change_volume(self, value):
-        self.audio_output.setVolume(float(value/100))
-        self.current_volume = value
-
     def closeEvent(self, event) -> None:
         self.player_settings.set_value('volume', self.current_volume)
         current_track_id = self.media_list.current_music.get('id')
@@ -125,6 +115,9 @@ class PlaylistList(QWidget):
     current_music = {}
     current_playlist = {}
 
+    offset = 0
+    limit = 100
+
     """
     Playlist, suggestions, albums
     """
@@ -132,7 +125,7 @@ class PlaylistList(QWidget):
     def __init__(self, parent: QWidget | None) -> None:
         super().__init__(parent=parent)
 
-        self.client = parent.client
+        self.client: Spotify = parent.client
         self.media_player = parent.media_player
 
         self.layout = QHBoxLayout()
@@ -140,22 +133,26 @@ class PlaylistList(QWidget):
         self.playlist = QListWidget()
         self.playlist.setMinimumSize(250, 100)
 
-        self.album_cover = QLabel()
-        self.album_cover.setMaximumSize(200, 200)
+        self.current_track_info = CurrentTrack(self)
 
         self.layout.addWidget(self.playlist)
-        self.layout.addWidget(self.album_cover)
-        self.setLayout(self.layout)
-        self.render_playlists()
+        self.layout.addWidget(self.current_track_info)
+
         self.playlist.itemDoubleClicked.connect(self.handle_click)
 
+        self.scrollbar = self.playlist.verticalScrollBar()
+        self.scrollbar.sliderMoved.connect(self.handle_scrollbar)
+
+        self.setLayout(self.layout)
+        self.render_playlists()
+
+    def handle_scrollbar(self, value):
+        if 2 % value:
+            value = value
+
     def update_album_cover(self, track_data):
-        file_path = track_data['album_localpath'] if path.isfile(
-            track_data['album_localpath']) else path.join(RESOURCE_IMAGE_PATH, 'default_image_cover.jpeg')
-        picture = QPixmap(file_path)
-        picture = picture.scaled(
-            200, 200, aspectRatioMode=Qt.AspectRatioMode.KeepAspectRatio)
-        self.album_cover.setPixmap(picture)
+        """Alias for update_info -> CurrentTrack"""
+        self.current_track_info.update_info(track_data)
 
     def handle_click(self, item):
         item_data = item.data(Qt.ItemDataRole.UserRole)
@@ -178,7 +175,7 @@ class PlaylistList(QWidget):
 
     def render_playlists(self):
         self.parent().top_bar.label_main.setText('Playlists')
-        result = self.client.current_user_playlists()
+        result = self.client.current_user_playlists(50, self.offset)
         self.playlist.clear()
 
         multi_label_widget = MultiLabelWidget(
@@ -230,11 +227,18 @@ class PlaylistList(QWidget):
             self.playlist.setItemWidget(item, multi_label_widget)
 
     def load_playlist(self, playlist_data):
-        result = self.client.playlist_tracks(playlist_data['id'])
+        result = self.client.playlist_tracks(
+            playlist_data['id'],
+            limit=self.limit,
+            offset=self.offset,
+        )
         self.render_tracks(playlist_data, result)
 
     def load_favorite(self, data):
-        result = self.client.current_user_saved_tracks()
+        result = self.client.current_user_saved_tracks(
+            limit=50,
+            offset=self.offset
+        )
         self.render_tracks(data, result)
 
     def render_tracks(self, playlist_data, result):
