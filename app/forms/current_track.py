@@ -16,6 +16,10 @@ class CurrentTrack(QWidget):
         self.label_current_track = QLabel()
         self.label_current_album = QLabel()
 
+        self.label_current_artist.setWordWrap(True)
+        self.label_current_track.setWordWrap(True)
+        self.label_current_album.setWordWrap(True)
+
         self.album_cover = QLabel()
         self.album_cover.setMaximumSize(200, 200)
 

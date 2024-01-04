@@ -4,9 +4,12 @@ from app import TEMP_PATH, RESOURCE_IMAGE_PATH
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
 from app.forms.other import DelimiterItemWidget
+from app.util import AlbumCover
 
 
 class MultiLabelWidget(QWidget):
+    album_cover_setted: bool = False
+
     def __init__(
         self,
         big_text: list = [],
@@ -17,19 +20,20 @@ class MultiLabelWidget(QWidget):
     ):
         super().__init__()
 
+        self.album_id = album_id
+
         hlayout = QHBoxLayout(self)
         self.track_info = TrackInfoWidget(
             self, big_text, medium_text, small_text)
         hlayout.addWidget(self.track_info)
 
         if album_id is not None:
-            icon_path = path.join(TEMP_PATH, 'images', path.join(album_id) + '.jpg') if path.isfile(path.join(
-                TEMP_PATH, 'images', path.join(album_id) + '.jpg')) else path.join(RESOURCE_IMAGE_PATH, 'default_image_cover.jpeg')
-            icon_label = QLabel()
-            icon_label.setPixmap(QIcon(icon_path).pixmap(
-                40, 40))  # Adjust the size as needed
+            self.album_cover_setted = AlbumCover.cover_exist(album_id=album_id)
+            icon_path = AlbumCover.get_path(album_id, True)
+            self.icon_label = QLabel()
+            self.icon_label.setPixmap(QIcon(icon_path).pixmap(40, 40))
             hlayout.addWidget(
-                icon_label, alignment=Qt.AlignmentFlag.AlignRight)
+                self.icon_label, alignment=Qt.AlignmentFlag.AlignRight)
 
         if delimiter:
             hlayout.addWidget(DelimiterItemWidget())

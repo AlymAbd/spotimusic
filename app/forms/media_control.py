@@ -1,3 +1,4 @@
+from PyQt6.QtMultimedia import QMediaPlayer
 from PyQt6.QtWidgets import QWidget, QPushButton, QLabel, QHBoxLayout, QVBoxLayout, QSlider, QSplitter
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QIcon
@@ -14,9 +15,13 @@ class MediaControl(QWidget):
         self.layout = QVBoxLayout()
 
         self.track_control = TrackControl(self, self.grandparent)
-        self.audio_control = AudioControl(self, self.grandparent)
+        self.track_control.setMinimumWidth(600)
 
-        self.layout.addWidget(self.track_control)
+        self.audio_control = AudioControl(self, self.grandparent)
+        self.audio_control.setMinimumWidth(600)
+
+        self.layout.addWidget(self.track_control,
+                              alignment=Qt.AlignmentFlag.AlignCenter)
         self.layout.addWidget(self.audio_control)
 
         self.setLayout(self.layout)
@@ -27,7 +32,13 @@ class TrackControl(QWidget):
     Buttons next, prev, play, pause, stop, add/remove to favorite
     """
 
+    NEXT_TRACK_STOP = 0
+    NEXT_TRACK_PLAY_NEXT = 1
+    NEXT_TRACK_REPEAT_CURRENT = 2
+    NEXT_TRACK_REPEAT_PLAYLIST = 3
+
     grandparent: QWidget = None
+    current_next_track_behaviour = NEXT_TRACK_PLAY_NEXT
 
     def __init__(self, parent: QWidget | None, grandparent: QWidget | None) -> None:
         super().__init__(parent=parent)
@@ -73,8 +84,8 @@ class TrackControl(QWidget):
         self.button_add.setMaximumSize(30, 30)
 
         self.button_similar = QPushButton()
-        self.button_similar.setIcon(QIcon(Icons('interface.infinite').str))
-        self.button_similar.setToolTip('Add to favorite')
+        self.button_similar.setIcon(QIcon(Icons('web.star-half').str))
+        self.button_similar.setToolTip('Show recomendations')
         self.button_similar.setMaximumSize(30, 30)
 
         self.button_shuffle = QPushButton()
@@ -88,6 +99,7 @@ class TrackControl(QWidget):
             QIcon(Icons('direction.angle-double-right').str)
         )
         self.button_action_next.setMaximumSize(30, 30)
+        self.button_action_next.clicked.connect(self.next_track_behaviour)
 
         self.button_download_all = QPushButton()
         self.button_download_all.setToolTip('Download all')
@@ -98,25 +110,78 @@ class TrackControl(QWidget):
 
         splitter = QSplitter()
         splitter.setOrientation(Qt.Orientation.Vertical)
-        splitter.setMinimumWidth(10)
+        splitter.setMinimumWidth(1)
+        splitter.setMaximumWidth(5)
 
-        self.layout.addWidget(self.button_shuffle)
-        self.layout.addWidget(self.button_action_next)
+        self.layout.addWidget(self.button_shuffle,
+                              alignment=Qt.AlignmentFlag.AlignLeft)
+        self.layout.addWidget(self.button_action_next,
+                              alignment=Qt.AlignmentFlag.AlignLeft)
         self.layout.addWidget(splitter)
-        self.layout.addWidget(self.button_add)
-        self.layout.addWidget(self.button_similar)
+        self.layout.addWidget(
+            self.button_add, alignment=Qt.AlignmentFlag.AlignLeft)
+        self.layout.addWidget(self.button_similar,
+                              alignment=Qt.AlignmentFlag.AlignLeft)
+        self.layout.addWidget(splitter)
+        self.layout.addWidget(self.button_download_all,
+                              alignment=Qt.AlignmentFlag.AlignLeft)
         self.layout.addWidget(splitter)
 
-        self.layout.addWidget(self.button_download_all)
-        self.layout.addWidget(self.button_prev)
-        self.layout.addWidget(self.button_stop)
-        self.layout.addWidget(self.button_play_pause)
-        self.layout.addWidget(self.button_next)
+        self.layout.addWidget(
+            self.button_prev, alignment=Qt.AlignmentFlag.AlignCenter)
+        self.layout.addWidget(
+            self.button_stop, alignment=Qt.AlignmentFlag.AlignCenter)
+        self.layout.addWidget(self.button_play_pause,
+                              alignment=Qt.AlignmentFlag.AlignCenter)
+        self.layout.addWidget(
+            self.button_next, alignment=Qt.AlignmentFlag.AlignCenter)
         self.layout.addWidget(splitter)
 
-        self.layout.addWidget(self.volume_control)
+        self.layout.addWidget(self.volume_control,
+                              alignment=Qt.AlignmentFlag.AlignRight)
 
         self.setLayout(self.layout)
+
+    def next_track_behaviour(self):
+        next_behaviour = self.current_next_track_behaviour
+        icon = None
+        title = ""
+
+        if self.current_next_track_behaviour == 3:
+            next_behaviour = self.NEXT_TRACK_STOP
+        else:
+            next_behaviour += 1
+        self.current_next_track_behaviour = next_behaviour
+
+        match next_behaviour:
+            case self.NEXT_TRACK_PLAY_NEXT:
+                icon = 'direction.angle-double-right'
+                title = 'Continue in playlist'
+            case self.NEXT_TRACK_REPEAT_CURRENT:
+                icon = 'interface.infinite'
+                title = 'Repeat current track'
+            case self.NEXT_TRACK_REPEAT_PLAYLIST:
+                icon = 'direction.shift-right'
+                title = 'Repeat current playlist'
+            case self.NEXT_TRACK_STOP:
+                icon = 'web.ban'
+                title = 'Do not continue'
+        self.button_action_next.setToolTip(title)
+        self.button_action_next.setIcon(
+            QIcon(Icons(icon).str)
+        )
+
+    def handle_next_track_behaviour(self, status):
+        if status == QMediaPlayer.MediaStatus.EndOfMedia:
+            match self.current_next_track_behaviour:
+                case self.NEXT_TRACK_PLAY_NEXT:
+                    self.media_next()
+                case self.NEXT_TRACK_REPEAT_CURRENT:
+                    self.parent().audio_control.slider_position_moved(0)
+                case self.NEXT_TRACK_REPEAT_PLAYLIST:
+                    self.media_next()
+                case self.NEXT_TRACK_STOP:
+                    self.media_stop()
 
     def media_stop(self):
         self.grandparent.media_player.stop()
@@ -135,7 +200,8 @@ class TrackControl(QWidget):
 
     def media_next(self):
         current_index = self.grandparent.media_list.playlist.indexFromItem(
-            self.grandparent.media_list.playlist.currentItem()).row()
+            self.grandparent.media_list.playlist.currentItem()
+        ).row()
         next_index = current_index + 1
         if (next_index + 1) > self.grandparent.media_list.playlist.count():
             next_index = 0
@@ -186,12 +252,13 @@ class AudioControl(QWidget):
         self.slider_position.setMinimumSize(100, 10)
         self.slider_position.setMaximum(1000)
         self.slider_position.setMinimum(0)
-        self.slider_position.sliderMoved.connect(self.slider_position_moved)
+        self.slider_position.sliderReleased.connect(self.slider_position_moved)
         self.layout.addWidget(self.label)
         self.layout.addWidget(self.slider_position)
         self.setLayout(self.layout)
 
-    def slider_position_moved(self, value):
+    def slider_position_moved(self, value=None):
+        value = value or self.slider_position.value()
         duration = self.grandparent.media_player.duration()
         new_position = value * duration / self.slider_position.maximum()
         self.grandparent.media_player.setPosition(int(new_position))
@@ -217,6 +284,8 @@ class VolumeControl(QWidget):
         self.button_mute.setToolTip('Mute')
         self.button_mute.setIcon(QIcon(Icons('media.volume-mute').str))
         self.button_mute.setMaximumSize(30, 30)
+        self.button_mute.setCheckable(True)
+        self.button_mute.clicked.connect(self.audio_mute)
 
         self.layout.addWidget(self.button_mute)
         self.layout.addWidget(self.slider_volume)
@@ -225,3 +294,6 @@ class VolumeControl(QWidget):
     def change_volume(self, value):
         self.grandparent.audio_output.setVolume(float(value/100))
         self.grandparent.current_volume = value
+
+    def audio_mute(self, value):
+        self.grandparent.audio_output.setMuted(value)

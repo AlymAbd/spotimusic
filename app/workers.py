@@ -9,15 +9,19 @@ from pytube import YouTube, Search
 
 class WorkerA(QThread):
     update_signal = pyqtSignal(dict)
+    run_type: str = None
+    track_data: dict = None
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__()
-        self.type = args[0] if args else None
-        self.track_data = kwargs.get('kwargs')
         self._stop_flag = False
 
+    def set_data(self, run_type, data: list) -> None:
+        self.run_type = run_type
+        self.track_data = data
+
     def run(self):
-        match self.type:
+        match self.run_type:
             case 'update_cover':
                 if self.download_album_cover(self.track_data):
                     self.track_data['download_cover_success'] = True
@@ -49,3 +53,7 @@ class WorkerA(QThread):
             stream = stream.streams.filter(only_audio=True).first()
             stream.download(MUSIC_CACHE_PATH, track_data['id'] + '.mp3')
             return True
+
+
+class WorkerB(WorkerA):
+    pass

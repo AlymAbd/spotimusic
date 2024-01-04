@@ -2,16 +2,17 @@ import requests
 from os import path
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QListWidget, QLabel, QHBoxLayout, QSlider, QSplitter, QListWidgetItem, QPushButton
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
-from PyQt6.QtCore import QUrl, Qt
+from PyQt6.QtCore import QUrl, Qt, QTimer
 from PyQt6.QtGui import QPixmap, QIcon
 from app import MUSIC_CACHE_PATH, TEMP_PATH, RESOURCE_IMAGE_PATH
-from app.workers import WorkerA
+from app.workers import WorkerA, WorkerB
 from app.models import PlayerSettings
 from app.icons import Icons
 from app.forms.multilabel import MultiLabelWidget
 from app.forms.media_control import MediaControl
 from app.forms.current_track import CurrentTrack
 from spotipy import Spotify
+from app.util import AlbumCover
 
 
 class Playlist(QWidget):
@@ -47,6 +48,7 @@ class Playlist(QWidget):
 
         self.media_list = PlaylistList(self)
         self.media_control = MediaControl(media_control_widget)
+        self.media_control.setDisabled(True)
 
         media_control_layout.addWidget(
             self.media_control, alignment=Qt.AlignmentFlag.AlignCenter)
@@ -59,7 +61,20 @@ class Playlist(QWidget):
         self.layout.addWidget(media_control_widget,
                               alignment=Qt.AlignmentFlag.AlignBottom)
 
+        self.media_player.mediaStatusChanged.connect(
+            self.media_control.track_control.handle_next_track_behaviour
+        )
+
         self.setLayout(self.layout)
+
+        self.download_worker_a = WorkerA(self)
+        self.download_worker_a.update_signal.connect(
+            self.media_list.play_selected_music,
+        )
+
+        self.download_worker_b = WorkerB(self)
+        self.download_worker_b.update_signal.connect(
+            self.media_list.update_album_cover)
 
     def closeEvent(self, event) -> None:
         self.player_settings.set_value('volume', self.current_volume)
@@ -115,24 +130,37 @@ class PlaylistList(QWidget):
     def update_album_cover(self, track_data):
         """Alias for update_info -> CurrentTrack"""
         self.current_track_info.update_info(track_data)
+        current_item = self.playlist.currentItem()
+        if current_item:
+            multi_label_widget = self.playlist.itemWidget(current_item)
+            if isinstance(multi_label_widget, MultiLabelWidget) and not multi_label_widget.album_cover_setted and AlbumCover.cover_exist(track_data['album_id']):
+                multi_label_widget.icon_label.setPixmap(
+                    QIcon(AlbumCover.get_path(
+                        album_id=track_data['album_id'])
+                    ).pixmap(40, 40)
+                )
 
     def handle_click(self, item):
         item_data = item.data(Qt.ItemDataRole.UserRole)
 
         match item_data['type']:
             case 'track':
+                self.parent().media_control.setDisabled(False)
                 item_data['album_localpath'] = path.join(
                     TEMP_PATH, 'images', item_data['album_id'] + '.jpg')
                 if not path.isfile(item_data['album_localpath']):
                     self.download_cover(item_data)
                 self.play_selected_music(item_data)
             case 'favorite':
+                self.parent().media_control.setDisabled(False)
                 self.load_favorite(item_data)
                 self.parent().top_bar.button_back.setHidden(False)
             case 'playlist':
+                self.parent().media_control.setDisabled(True)
                 self.parent().top_bar.button_back.setHidden(False)
                 self.load_playlist(item_data)
             case _:
+                self.parent().media_control.setDisabled(True)
                 self.render_playlists()
 
     def render_playlists(self):
@@ -248,10 +276,8 @@ class PlaylistList(QWidget):
         file_path = path.join(MUSIC_CACHE_PATH, track_data['id'] + '.mp3')
 
         if not path.isfile(file_path):
-            self.download_worker = WorkerA('play_track', kwargs=track_data)
-            self.download_worker.update_signal.connect(
-                self.play_selected_music)
-            self.download_worker.start()
+            self.parent().download_worker_a.set_data('play_track', track_data)
+            self.parent().download_worker_a.start()
             return
 
         self.current_track_info.update_info(track_data)
@@ -260,9 +286,8 @@ class PlaylistList(QWidget):
         self.parent().media_control.track_control.media_playpause(True)
 
     def download_cover(self, track_data):
-        self.download_worker = WorkerA('update_cover', kwargs=track_data)
-        self.download_worker.update_signal.connect(self.update_album_cover)
-        self.download_worker.start()
+        self.parent().download_worker_b.set_data('update_cover', track_data)
+        self.parent().download_worker_b.start()
 
 
 class TopPlaylistBar(QWidget):
