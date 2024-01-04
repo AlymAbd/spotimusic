@@ -1,6 +1,6 @@
 from app import OAUTH_FILE_PATH, KILL_THREAD_PATH
-from .models import Secrets
 from os import path, remove
+from .models import Secrets
 
 
 def secret_exist():

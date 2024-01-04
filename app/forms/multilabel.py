@@ -1,6 +1,4 @@
-from os import path
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QHBoxLayout, QSizePolicy
-from app import TEMP_PATH, RESOURCE_IMAGE_PATH
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
 from app.forms.other import DelimiterItemWidget
@@ -19,8 +17,6 @@ class MultiLabelWidget(QWidget):
         delimiter: bool = False
     ):
         super().__init__()
-
-        self.album_id = album_id
 
         hlayout = QHBoxLayout(self)
         self.track_info = TrackInfoWidget(

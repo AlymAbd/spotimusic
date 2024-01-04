@@ -1,6 +1,7 @@
-from abc import ABC, abstractclassmethod
+from abc import ABC
 from .entity import Entity
 from .database import db_cursor
+
 
 class Model(ABC, object):
     _onerecord: bool = False
@@ -65,6 +66,7 @@ class Builder(object):
     use []list for OR logic
     use ()tuple for AND logic
     """
+
     def where(self, *where):
         self._where = self._handle_filter(where)
 
@@ -89,7 +91,7 @@ class Builder(object):
     def order(self, *orderby):
         self._ordering = orderby
 
-    def load(self, as_object = True) -> [] or Entity:
+    def load(self, as_object=True) -> [] or Entity:
         empty = False
         data = []
         cur = db_cursor.execute(self._generate_sql())
@@ -161,8 +163,10 @@ class Column(ABC):
 class String(Column):
     _type = 'TEXT'
 
+
 class Integer(Column):
     _type = 'INTEGER'
+
 
 class Decimal(Column):
     _type = 'REAL'
@@ -174,17 +178,21 @@ class Decimal(Column):
         self._places = places
         super().__init__(default, nullable)
 
+
 class Float(Column):
     _type = 'REAL'
+
 
 class Datetime(Column):
     _type = 'DATETIME'
 
-    def __init__(self, only_date = False, only_time = False, default="", nullable=True) -> None:
+    def __init__(self, only_date=False, only_time=False, default="", nullable=True) -> None:
         super().__init__(default, nullable)
+
 
 class Array(Column):
     _type = 'TEXT'
+
 
 class Json(Column):
     _type = 'TEXT'

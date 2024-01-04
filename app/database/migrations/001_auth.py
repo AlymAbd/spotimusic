@@ -12,4 +12,3 @@ class SecretsMigration(Migration):
             secret TEXT,
             state TEXT
         );"""
-

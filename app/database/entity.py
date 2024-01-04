@@ -1,5 +1,6 @@
 from .database import db_cursor, database
 
+
 class Entity(object):
     model = None
     pk: str = None
@@ -7,7 +8,7 @@ class Entity(object):
     old_values = {}
     is_new = False
 
-    def __init__(self, model, is_new = False) -> None:
+    def __init__(self, model, is_new=False) -> None:
         self.values = {}
         self.old_values = {}
         self.pk = None
@@ -27,7 +28,7 @@ class Entity(object):
     def _serialize_to_save(self, column, value):
         pass
 
-    def delete(self, id = None, custom: str = None):
+    def delete(self, id=None, custom: str = None):
         sql = f"DELETE FROM {self.model.table_name}"
         if custom:
             sql += f" WHERE {custom}"
@@ -48,6 +49,7 @@ class Entity(object):
     Data list of array
     example [(column0, value0), (column1, value1)]
     """
+
     def set_data(self, data):
         for row in data:
             self.set_value(row[0], row[1])

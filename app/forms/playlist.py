@@ -1,18 +1,18 @@
 import requests
 from os import path
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QListWidget, QLabel, QHBoxLayout, QSlider, QSplitter, QListWidgetItem, QPushButton
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QListWidget, QLabel, QHBoxLayout, QSplitter, QListWidgetItem, QPushButton
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
-from PyQt6.QtCore import QUrl, Qt, QTimer
-from PyQt6.QtGui import QPixmap, QIcon
-from app import MUSIC_CACHE_PATH, TEMP_PATH, RESOURCE_IMAGE_PATH
+from PyQt6.QtCore import QUrl, Qt
+from PyQt6.QtGui import QIcon
+from app import MUSIC_CACHE_PATH, TEMP_PATH
 from app.workers import WorkerA, WorkerB
 from app.models import PlayerSettings
 from app.icons import Icons
+from app.util import AlbumCover
 from app.forms.multilabel import MultiLabelWidget
 from app.forms.media_control import MediaControl
 from app.forms.current_track import CurrentTrack
 from spotipy import Spotify
-from app.util import AlbumCover
 
 
 class Playlist(QWidget):
@@ -21,6 +21,8 @@ class Playlist(QWidget):
     client: Spotify = None
     current_volume: int = 50
     player_settings: PlayerSettings = None
+
+    _worker_a_busy: bool = False
 
     def __init__(self, parent: QWidget | None) -> None:
         from app import client
@@ -43,6 +45,8 @@ class Playlist(QWidget):
 
         self.top_bar = TopPlaylistBar(self)
 
+        self.label = QLabel('Worker status:')
+
         media_control_widget = QWidget(self)
         media_control_layout = QHBoxLayout()
 
@@ -55,6 +59,7 @@ class Playlist(QWidget):
 
         media_control_widget.setLayout(media_control_layout)
 
+        self.layout.addWidget(self.label)
         self.layout.addWidget(self.top_bar)
         self.layout.addWidget(self.media_list)
         self.layout.addWidget(QSplitter())
@@ -71,6 +76,9 @@ class Playlist(QWidget):
         self.download_worker_a.update_signal.connect(
             self.media_list.play_selected_music,
         )
+        self.download_worker_a.busy_signal.connect(
+            self.check_busy_worker
+        )
 
         self.download_worker_b = WorkerB(self)
         self.download_worker_b.update_signal.connect(
@@ -84,6 +92,18 @@ class Playlist(QWidget):
         self.player_settings.set_value('last_track_id', current_track_id)
         self.player_settings.save()
         return super().closeEvent(event)
+
+    def check_busy_worker(self, value):
+        self.worker_a_busy = value
+
+    @property
+    def worker_a_busy(self):
+        return self._worker_a_busy
+
+    @worker_a_busy.setter
+    def worker_a_busy(self, value):
+        self._worker_a_busy = value
+        self.label.setText(f'Worker status active: {value}')
 
 
 class PlaylistList(QWidget):

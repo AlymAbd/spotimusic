@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import QMainWindow, QWidgetAction
+from PyQt6.QtGui import QIcon
 from .forms import Auth, Playlist, Settings
 from .config import config_exist, secret_exist, spotify_logout
-from PyQt6.QtGui import QPixmap, QIcon
 from app.icons import Icons
 from app import client
 

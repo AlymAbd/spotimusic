@@ -1,14 +1,14 @@
+import glob
 from .models import Model
 from .database import db_cursor
-from app import generate_path
-from inspect import isclass
-import glob
+from app import generate_path, models
 from os.path import isfile, basename
+from inspect import isclass
 from importlib import util
-from app import models
 
 
 MIGRATION_PATH = generate_path(pathes=('database', 'migrations'))
+
 
 class Migration(object):
     model: Model = None
@@ -22,10 +22,10 @@ class Migration(object):
         exist_migrations = self._get_exist_migrations()
         migration_path = generate_path(pathes=(MIGRATION_PATH, '*.py'))
         migrations = [basename(f)[:-3] for f in glob.glob(migration_path)
-                            if isfile(f)
-                            and not f.endswith('__init__.py')
-                            and basename(f)[:-3] not in exist_migrations
-                    ]
+                      if isfile(f)
+                      and not f.endswith('__init__.py')
+                      and basename(f)[:-3] not in exist_migrations
+                      ]
         for module_name in migrations[::-1]:
             module = self._load_module(module_name)
             self._handle_module_migrations(module)
@@ -52,13 +52,15 @@ class Migration(object):
         return data
 
     def _load_module(self, module_name):
-        spec = util.spec_from_file_location(module_name, generate_path(MIGRATION_PATH, pathes=(module_name+'.py')))
+        spec = util.spec_from_file_location(module_name, generate_path(
+            MIGRATION_PATH, pathes=(module_name+'.py')))
         module = util.module_from_spec(spec)
         spec.loader.exec_module(module)
         return module
 
     def _handle_module_migrations(self, module):
-        items = [x for x in dir(module) if not x.startswith('__') and self._check_item(module, x)]
+        items = [x for x in dir(module) if not x.startswith(
+            '__') and self._check_item(module, x)]
         for item in items:
             item: Migration = getattr(module, item)()
             item.migrate()
@@ -77,12 +79,14 @@ class Migration(object):
     """
     Method for manipulation with table (CREATE, UPDATE, DROP)
     """
+
     def ddl(self) -> str:
         pass
 
     """
     Method for manipulation with data (INSERT, DELETE, UPDATE)
     """
+
     def sql(self) -> str:
         pass
 

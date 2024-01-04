@@ -1,6 +1,7 @@
 from app.database.migration import Migration
 from app.models import Migration as MigrationModel
 
+
 class Migrations(Migration):
     model = MigrationModel
 

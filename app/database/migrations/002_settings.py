@@ -12,6 +12,7 @@ class UserSettingsMigration(Migration):
             startup_page DEFAULT 'HOME'
         );"""
 
+
 class PlayerSettingsMigration(Migration):
     model = PlayerSettings
 

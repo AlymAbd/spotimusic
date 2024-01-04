@@ -1,15 +1,13 @@
-from datetime import datetime, timedelta
-from os import path, remove
-from PyQt6.QtWidgets import QVBoxLayout, QPushButton, QLabel
 import webbrowser
 import uvicorn
 import time
-from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QPushButton, QListWidget, QLabel,
-    QHBoxLayout, QSlider, QSplitter, QListWidgetItem
-)
-from app.config import config_exist
 from app import KILL_THREAD_PATH
+from datetime import datetime, timedelta
+from os import path, remove
+from PyQt6.QtWidgets import QVBoxLayout, QPushButton, QLabel
+from PyQt6.QtWidgets import (
+    QWidget, QVBoxLayout, QPushButton, QLabel,
+)
 
 # minutes
 TIMEOUT = 1

@@ -177,7 +177,8 @@ class TrackControl(QWidget):
                 case self.NEXT_TRACK_PLAY_NEXT:
                     self.media_next()
                 case self.NEXT_TRACK_REPEAT_CURRENT:
-                    self.parent().audio_control.slider_position_moved(0)
+                    self.parent().audio_control.slider_position_moved(0.1)
+                    self.media_playpause(True)
                 case self.NEXT_TRACK_REPEAT_PLAYLIST:
                     self.media_next()
                 case self.NEXT_TRACK_STOP:
@@ -187,8 +188,8 @@ class TrackControl(QWidget):
         self.grandparent.media_player.stop()
         self.grandparent.media_list.current_track_info.update_info({})
 
-    def media_playpause(self, value):
-        if not self.grandparent.media_player.isPlaying():
+    def media_playpause(self, value=None):
+        if not self.grandparent.media_player.isPlaying() or value:
             self.button_play_pause.setIcon(QIcon(Icons('media.pause').str))
             self.grandparent.media_player.play()
             self.button_play_pause.setChecked(True)

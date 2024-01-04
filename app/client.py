@@ -1,6 +1,5 @@
 from spotipy.oauth2 import SpotifyPKCE, SpotifyOAuth
 from spotipy import Spotify
-from PyQt6.QtCore import QObject, pyqtSignal
 
 
 class Client(object):

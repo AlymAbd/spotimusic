@@ -1,14 +1,14 @@
 import requests
-import threading
-from threading import Thread
-from PyQt6.QtCore import QObject, QUrl, Qt, QThread, pyqtSignal
-from app import MUSIC_CACHE_PATH, TEMP_PATH, RESOURCE_IMAGE_PATH
+from app import MUSIC_CACHE_PATH
 from os import path
+from PyQt6.QtCore import QThread, pyqtSignal
 from pytube import YouTube, Search
 
 
 class WorkerA(QThread):
     update_signal = pyqtSignal(dict)
+    busy_signal = pyqtSignal(bool)
+
     run_type: str = None
     track_data: dict = None
 
@@ -27,9 +27,11 @@ class WorkerA(QThread):
                     self.track_data['download_cover_success'] = True
                 self.update_signal.emit(self.track_data)
             case 'play_track':
+                self.busy_signal.emit(True)
                 if self.download_track(self.track_data):
                     self.track_data['download_track_success'] = True
                 self.update_signal.emit(self.track_data)
+                self.busy_signal.emit(False)
         self.stop()
 
     def stop(self):
@@ -56,4 +58,8 @@ class WorkerA(QThread):
 
 
 class WorkerB(WorkerA):
+    pass
+
+
+class WorkerC(WorkerA):
     pass
