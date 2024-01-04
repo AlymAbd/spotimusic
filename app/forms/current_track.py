@@ -20,20 +20,32 @@ class CurrentTrack(QWidget):
         self.album_cover.setMaximumSize(200, 200)
 
         self.layout.addWidget(self.album_cover)
-        self.layout.addWidget(self.label_current_artist)
-        self.layout.addWidget(self.label_current_album)
         self.layout.addWidget(self.label_current_track)
+        self.layout.addWidget(self.label_current_album)
+        self.layout.addWidget(self.label_current_artist)
 
         self.setLayout(self.layout)
 
-    def update_info(self, track_data):
-        self.label_current_album.setText(track_data.get(''))
-        self.label_current_artist.setText(track_data.get(''))
-        self.label_current_track.setText(track_data.get(''))
+    def update_info(self, track_data, percentage=None):
+        self.label_current_album.setText(
+            f"Album name: {track_data.get('album_name')}"
+        )
+        self.label_current_artist.setText(
+            f"Artists: {', '.join(track_data.get('artists', []))}"
+        )
 
-        file_path = track_data['album_localpath'] if path.isfile(
-            track_data['album_localpath']) else path.join(RESOURCE_IMAGE_PATH, 'default_image_cover.jpeg')
-        picture = QPixmap(file_path)
-        picture = picture.scaled(
-            200, 200, aspectRatioMode=Qt.AspectRatioMode.KeepAspectRatio)
-        self.album_cover.setPixmap(picture)
+        if percentage and percentage >= 0:
+            self.label_current_track.setText(
+                f" *caching* {track_data.get('name')}")
+        else:
+            self.label_current_track.setText(
+                f"Title: {track_data.get('name')}"
+            )
+
+        if track_data.get('album_localpath'):
+            file_path = track_data['album_localpath'] if path.isfile(
+                track_data['album_localpath']) else path.join(RESOURCE_IMAGE_PATH, 'default_image_cover.jpeg')
+            picture = QPixmap(file_path)
+            picture = picture.scaled(
+                200, 200, aspectRatioMode=Qt.AspectRatioMode.KeepAspectRatio)
+            self.album_cover.setPixmap(picture)

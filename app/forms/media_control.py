@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QWidget, QPushButton, QLabel, QHBoxLayout, QSlider, QSplitter
+from PyQt6.QtWidgets import QWidget, QPushButton, QLabel, QHBoxLayout, QVBoxLayout, QSlider, QSplitter
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QIcon
 from app.icons import Icons
@@ -11,11 +11,13 @@ class MediaControl(QWidget):
         super().__init__(parent=parent)
         self.grandparent = parent.parent()
 
-        self.layout = QHBoxLayout()
+        self.layout = QVBoxLayout()
 
         self.track_control = TrackControl(self, self.grandparent)
         self.audio_control = AudioControl(self, self.grandparent)
-        self.volume_control = VolumeControl(self, self.grandparent)
+
+        self.layout.addWidget(self.track_control)
+        self.layout.addWidget(self.audio_control)
 
         self.setLayout(self.layout)
 
@@ -92,6 +94,8 @@ class TrackControl(QWidget):
         self.button_download_all.setIcon(QIcon(Icons('web.download').str))
         self.button_download_all.setMaximumSize(30, 30)
 
+        self.volume_control = VolumeControl(self, self.grandparent)
+
         splitter = QSplitter()
         splitter.setOrientation(Qt.Orientation.Vertical)
         splitter.setMinimumWidth(10)
@@ -102,18 +106,21 @@ class TrackControl(QWidget):
         self.layout.addWidget(self.button_add)
         self.layout.addWidget(self.button_similar)
         self.layout.addWidget(splitter)
-        self.layout.addWidget(self.button_download_all)
 
+        self.layout.addWidget(self.button_download_all)
         self.layout.addWidget(self.button_prev)
         self.layout.addWidget(self.button_stop)
         self.layout.addWidget(self.button_play_pause)
         self.layout.addWidget(self.button_next)
+        self.layout.addWidget(splitter)
+
+        self.layout.addWidget(self.volume_control)
 
         self.setLayout(self.layout)
 
     def media_stop(self):
         self.grandparent.media_player.stop()
-        self.grandparent.label_current_track.setText('')
+        self.grandparent.media_list.current_track_info.update_info({})
 
     def media_playpause(self, value):
         if not self.grandparent.media_player.isPlaying():
@@ -152,10 +159,10 @@ class TrackControl(QWidget):
     def update_current_seek_position(self):
         position = self.grandparent.media_player.position() or 0
         duration = self.grandparent.media_player.duration() or 1
-        self.grandparent.audio_control.slider_position.setValue(
+        self.parent().audio_control.slider_position.setValue(
             int(position/duration*1000)
         )
-        self.grandparent.audio_control.label.setText(
+        self.parent().audio_control.label.setText(
             f'{self.format_time(position)} / {self.format_time(self.grandparent.media_player.duration())}')
 
     def format_time(self, milliseconds):
@@ -167,9 +174,12 @@ class AudioControl(QWidget):
     """
     Track position, track info
     """
+    grandparent = None
 
-    def __init__(self, parent: QWidget | None) -> None:
+    def __init__(self, parent: QWidget | None, grandparent: QWidget | None) -> None:
         super().__init__(parent=parent)
+        self.grandparent = grandparent
+
         self.layout = QHBoxLayout()
         self.label = QLabel('00:00 | 00:00')
         self.slider_position = QSlider(Qt.Orientation.Horizontal)
@@ -182,16 +192,17 @@ class AudioControl(QWidget):
         self.setLayout(self.layout)
 
     def slider_position_moved(self, value):
-        duration = self.parent().media_player.duration()
+        duration = self.grandparent.media_player.duration()
         new_position = value * duration / self.slider_position.maximum()
-        self.parent().media_player.setPosition(int(new_position))
+        self.grandparent.media_player.setPosition(int(new_position))
 
 
 class VolumeControl(QWidget):
-    current_volume: int = 50
+    grandparent = None
 
-    def __init__(self, parent: QWidget):
+    def __init__(self, parent: QWidget | None, grandparent: QWidget | None) -> None:
         super().__init__(parent)
+        self.grandparent = grandparent
 
         self.layout = QHBoxLayout()
 
@@ -200,7 +211,7 @@ class VolumeControl(QWidget):
         self.slider_volume.setMaximumSize(150, 20)
         self.slider_volume.valueChanged.connect(self.change_volume)
         self.slider_volume.setRange(0, 100)
-        self.slider_volume.setValue(self.current_volume)
+        self.slider_volume.setValue(self.grandparent.current_volume)
 
         self.button_mute = QPushButton()
         self.button_mute.setToolTip('Mute')
@@ -212,5 +223,5 @@ class VolumeControl(QWidget):
         self.setLayout(self.layout)
 
     def change_volume(self, value):
-        self.parent().parent().audio_output.setVolume(float(value/100))
-        self.current_volume = value
+        self.grandparent.audio_output.setVolume(float(value/100))
+        self.grandparent.current_volume = value

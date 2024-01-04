@@ -14,34 +14,6 @@ from app.forms.current_track import CurrentTrack
 from spotipy import Spotify
 
 
-class TopPlaylistBar(QWidget):
-    def __init__(self, parent: QWidget):
-        super().__init__(parent)
-        self.layout = QHBoxLayout()
-
-        self.label_main = QLabel('Playlists')
-        self.button_back = QPushButton()
-        self.button_back.setToolTip('Back to previous page')
-        self.button_back.setIcon(
-            QIcon(Icons('direction.arrow-left-circle').str))
-        self.button_back.setMaximumWidth(40)
-        self.button_back.clicked.connect(self.handle_back_button)
-        self.button_back.setHidden(True)
-
-        self.layout.addWidget(
-            self.button_back, alignment=Qt.AlignmentFlag.AlignLeft
-        )
-        self.layout.addWidget(
-            self.label_main, alignment=Qt.AlignmentFlag.AlignLeft
-        )
-
-        self.setLayout(self.layout)
-
-    def handle_back_button(self):
-        self.parent().media_list.render_playlists()
-        self.button_back.setHidden(True)
-
-
 class Playlist(QWidget):
     media_player = None
     audio_output = None
@@ -75,26 +47,16 @@ class Playlist(QWidget):
 
         self.media_list = PlaylistList(self)
         self.media_control = MediaControl(media_control_widget)
-        self.volume_control = VolumeControl(media_control_widget)
-        self.audio_control = AudioControl(self)
 
-        media_control_layout.addWidget(
-            self.audio_control, alignment=Qt.AlignmentFlag.AlignRight)
         media_control_layout.addWidget(
             self.media_control, alignment=Qt.AlignmentFlag.AlignCenter)
 
         media_control_widget.setLayout(media_control_layout)
 
-        self.label_current_track = QLabel('...')
-
         self.layout.addWidget(self.top_bar)
         self.layout.addWidget(self.media_list)
         self.layout.addWidget(QSplitter())
-        self.layout.addWidget(self.label_current_track,
-                              alignment=Qt.AlignmentFlag.AlignBottom)
         self.layout.addWidget(media_control_widget,
-                              alignment=Qt.AlignmentFlag.AlignBottom)
-        self.layout.addWidget(self.audio_control,
                               alignment=Qt.AlignmentFlag.AlignBottom)
 
         self.setLayout(self.layout)
@@ -141,13 +103,13 @@ class PlaylistList(QWidget):
         self.playlist.itemDoubleClicked.connect(self.handle_click)
 
         self.scrollbar = self.playlist.verticalScrollBar()
-        self.scrollbar.sliderMoved.connect(self.handle_scrollbar)
+        self.scrollbar.valueChanged.connect(self.handle_scrollbar)
 
         self.setLayout(self.layout)
         self.render_playlists()
 
     def handle_scrollbar(self, value):
-        if 2 % value:
+        if value > 0.8 * value:
             value = value
 
     def update_album_cover(self, track_data):
@@ -252,11 +214,13 @@ class PlaylistList(QWidget):
             item = QListWidgetItem()
             item.setData(Qt.ItemDataRole.UserRole, {
                 'id': track['track']['id'],
+                'name': track['track']['name'],
                 'type': 'track',
                 'album_id': track['track']['album']['id'],
+                'album_name': track['track']['album']['name'],
                 'album_image_url': track['track']['album']['images'][0]['url'],
                 'main_artist_name': track['track']['artists'][0]['name'],
-                'name': track['track']['name']
+                'artists': [x['name'] for x in track['track']['artists']],
             })
             multi_label_widget = MultiLabelWidget(
                 [track['track']['name']],
@@ -268,15 +232,17 @@ class PlaylistList(QWidget):
             self.playlist.addItem(item)
             self.playlist.setItemWidget(item, multi_label_widget)
 
-        self.parent().label_current_track.setText(
+        self.parent().top_bar.label_main.setText(
             f'Music List ({self.playlist.count()})')
 
     def play_selected_music(self, track_data):
-        self.update_music_label(track_data, 1)
-        self.parent().media_control.media_stop()
+        self.current_track_info.update_info(track_data, 1)
+        self.parent().media_control.track_control.media_stop()
+
         self.playlist.setDisabled(True)
         self.update_album_cover(track_data)
         self.current_music = track_data
+
         self.setWindowTitle(
             self.current_playlist['name'] + ': ' + self.current_music['name'])
         file_path = path.join(MUSIC_CACHE_PATH, track_data['id'] + '.mp3')
@@ -288,18 +254,40 @@ class PlaylistList(QWidget):
             self.download_worker.start()
             return
 
-        self.update_music_label(track_data)
+        self.current_track_info.update_info(track_data)
         self.playlist.setDisabled(False)
         self.media_player.setSource(QUrl.fromLocalFile(file_path))
-        self.parent().media_control.media_playpause(True)
-
-    def update_music_label(self, track_data, percentage=None):
-        title = track_data['name']
-        if percentage and percentage >= 0:
-            title = f" *caching* {title}"
-        self.parent().label_current_track.setText(title)
+        self.parent().media_control.track_control.media_playpause(True)
 
     def download_cover(self, track_data):
         self.download_worker = WorkerA('update_cover', kwargs=track_data)
         self.download_worker.update_signal.connect(self.update_album_cover)
         self.download_worker.start()
+
+
+class TopPlaylistBar(QWidget):
+    def __init__(self, parent: QWidget):
+        super().__init__(parent)
+        self.layout = QHBoxLayout()
+
+        self.label_main = QLabel('Playlists')
+        self.button_back = QPushButton()
+        self.button_back.setToolTip('Back to previous page')
+        self.button_back.setIcon(
+            QIcon(Icons('direction.arrow-left-circle').str))
+        self.button_back.setMaximumWidth(40)
+        self.button_back.clicked.connect(self.handle_back_button)
+        self.button_back.setHidden(True)
+
+        self.layout.addWidget(
+            self.button_back, alignment=Qt.AlignmentFlag.AlignLeft
+        )
+        self.layout.addWidget(
+            self.label_main, alignment=Qt.AlignmentFlag.AlignLeft
+        )
+
+        self.setLayout(self.layout)
+
+    def handle_back_button(self):
+        self.parent().media_list.render_playlists()
+        self.button_back.setHidden(True)
