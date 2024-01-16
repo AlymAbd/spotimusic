@@ -111,9 +111,13 @@ class PlaylistList(QWidget):
     media_player = None
     current_music = {}
     current_playlist = {}
+    scrollbar_last_value = 0
 
-    offset = 0
+    _offset = 0
     limit = 100
+
+    prev_page_exist: bool = False
+    next_page_exist: bool = True
 
     """
     Playlist, suggestions, albums
@@ -141,11 +145,39 @@ class PlaylistList(QWidget):
         self.scrollbar.valueChanged.connect(self.handle_scrollbar)
 
         self.setLayout(self.layout)
-        self.render_playlists()
+        self.load_playlists_list()
+
+    @property
+    def offset(self):
+        return self._offset
+
+    @offset.setter
+    def offset(self, value):
+        if value < 0:
+            self._offset = 0
+        else:
+            self._offset = 0
 
     def handle_scrollbar(self, value):
-        if value > 0.8 * value:
-            value = value
+        if self.scrollbar_last_value < value:
+            if self.scrollbar.maximum() > 0 and int(value / self.scrollbar.maximum() * 100) == 90 and self.next_page_exist:
+                if self.current_playlist['type'] == 'playlist':
+                    self.load_playlist(
+                        self.current_playlist, offset=self.offset+self.limit)
+                elif self.current_playlist['type'] == 'favorite':
+                    self.load_favorite(
+                        self.current_playlist, offset=self.offset+self.limit)
+        else:
+            if self.scrollbar.maximum() > 0 and int(value / self.scrollbar.maximum() * 100) == 10 and self.prev_page_exist:
+                self.offset -= 100
+                if self.current_playlist['type'] == 'playlist':
+                    self.load_playlist(
+                        self.current_playlist, self.offset+self.limit)
+                elif self.current_playlist['type'] == 'favorite':
+                    self.load_favorite(
+                        self.current_playlist, self.offset+self.limit)
+
+        self.scrollbar_last_value = value
 
     def update_album_cover(self, track_data):
         """Alias for update_info -> CurrentTrack"""
@@ -165,6 +197,7 @@ class PlaylistList(QWidget):
 
         match item_data['type']:
             case 'track':
+                self.current_music = item_data
                 self.parent().media_control.setDisabled(False)
                 item_data['album_localpath'] = path.join(
                     TEMP_PATH, 'images', item_data['album_id'] + '.jpg')
@@ -172,22 +205,34 @@ class PlaylistList(QWidget):
                     self.download_cover(item_data)
                 self.play_selected_music(item_data)
             case 'favorite':
+                self.current_playlist = item_data
                 self.parent().media_control.setDisabled(False)
                 self.load_favorite(item_data)
                 self.parent().top_bar.button_back.setHidden(False)
             case 'playlist':
+                self.current_playlist = item_data
                 self.parent().media_control.setDisabled(True)
                 self.parent().top_bar.button_back.setHidden(False)
                 self.load_playlist(item_data)
             case _:
                 self.parent().media_control.setDisabled(True)
-                self.render_playlists()
+                self.load_playlists_list()
 
-    def render_playlists(self):
+    def load_playlists_list(self, limit: int = 50, offset: int = 0, clear_playlist: bool = True):
         self.parent().top_bar.label_main.setText('Playlists')
-        result = self.client.current_user_playlists(50, self.offset)
-        self.playlist.clear()
+        result = self.client.current_user_playlists(
+            limit=limit,
+            offset=offset
+        )
 
+        self.prev_page_exist = result['previous']
+        self.next_page_exist = result['next']
+
+        if clear_playlist:
+            self.playlist.clear()
+        self.render_playlists_list(result['items'])
+
+    def render_playlists_list(self, playlist_list: list):
         multi_label_widget = MultiLabelWidget(
             big_text=['Favorite'],
             medium_text=[],
@@ -205,7 +250,7 @@ class PlaylistList(QWidget):
         self.playlist.addItem(item)
         self.playlist.setItemWidget(item, multi_label_widget)
 
-        for playlist in result['items']:
+        for playlist in playlist_list:
             item = QListWidgetItem()
             item.setData(Qt.ItemDataRole.UserRole, {
                 'id': playlist['id'], 'type': 'playlist'
@@ -236,28 +281,47 @@ class PlaylistList(QWidget):
             self.playlist.addItem(item)
             self.playlist.setItemWidget(item, multi_label_widget)
 
-    def load_playlist(self, playlist_data):
+    def load_playlist(self, playlist_data: dict, limit: int = 100, offset: int = 0, clear_playlist: bool = True):
+        clear_playlist: bool = offset == 0
         result = self.client.playlist_tracks(
             playlist_data['id'],
-            limit=self.limit,
-            offset=self.offset,
+            limit=limit,
+            offset=offset,
         )
+        self.prev_page_exist = result['previous']
+        self.next_page_exist = result['next']
+        if clear_playlist:
+            self.playlist.clear()
         self.render_tracks(playlist_data, result)
 
-    def load_favorite(self, data):
-        result = self.client.current_user_saved_tracks(
-            limit=50,
-            offset=self.offset
-        )
-        self.render_tracks(data, result)
+    def load_favorite(self, playlist_data: dict, limit: int = 50, offset: int = 0, clear_playlist: bool = True):
+        result = []
 
-    def render_tracks(self, playlist_data, result):
+        if limit > 50:
+            limit = 50
+
+        for i in range(2):
+            response = self.client.current_user_saved_tracks(
+                limit=limit,
+                offset=offset
+            )
+            self.prev_page_exist = response['previous']
+            self.next_page_exist = response['next']
+            result += response['items']
+            offset += 50
+        result = {
+            'items': result
+        }
+        self.offset = offset
+        if clear_playlist:
+            self.playlist.clear()
+        self.render_tracks(playlist_data, result)
+
+    def render_tracks(self, playlist_data: dict, result: list):
         self.parent().top_bar.label_main.setText(
             f"Playlist: {playlist_data['name']}")
 
-        self.current_playlist = playlist_data
         self.setWindowTitle(playlist_data['name'])
-        self.playlist.clear()
         for track in result['items']:
             item = QListWidgetItem()
             item.setData(Qt.ItemDataRole.UserRole, {
@@ -283,13 +347,12 @@ class PlaylistList(QWidget):
         self.parent().top_bar.label_main.setText(
             f'Music List ({self.playlist.count()})')
 
-    def play_selected_music(self, track_data):
+    def play_selected_music(self, track_data: dict):
         self.current_track_info.update_info(track_data, 1)
         self.parent().media_control.track_control.media_stop()
 
         self.playlist.setDisabled(True)
         self.update_album_cover(track_data)
-        self.current_music = track_data
 
         self.setWindowTitle(
             self.current_playlist['name'] + ': ' + self.current_music['name'])
@@ -305,7 +368,7 @@ class PlaylistList(QWidget):
         self.media_player.setSource(QUrl.fromLocalFile(file_path))
         self.parent().media_control.track_control.media_playpause(True)
 
-    def download_cover(self, track_data):
+    def download_cover(self, track_data: dict):
         self.parent().download_worker_b.set_data('update_cover', track_data)
         self.parent().download_worker_b.start()
 
@@ -334,5 +397,5 @@ class TopPlaylistBar(QWidget):
         self.setLayout(self.layout)
 
     def handle_back_button(self):
-        self.parent().media_list.render_playlists()
+        self.parent().media_list.load_playlists_list()
         self.button_back.setHidden(True)
