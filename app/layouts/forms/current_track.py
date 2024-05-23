@@ -6,10 +6,12 @@ from PyQt6.QtCore import Qt
 
 
 class CurrentTrack(QWidget):
+    track_list = None
+
     def __init__(self, parent):
         super().__init__()
 
-        self.parent = parent
+        self.track_list = parent
         self.layout = QVBoxLayout()
 
         self.label_current_artist = QLabel()
@@ -34,7 +36,7 @@ class CurrentTrack(QWidget):
         self.layout.addWidget(label_widget)
         self.setLayout(self.layout)
 
-    def update_info(self, track_data, percentage=None):
+    def update_info(self, track_data, caching=None):
         self.label_current_album.setText(
             f"Album: {track_data.get('album_name')}"
         )
@@ -42,9 +44,9 @@ class CurrentTrack(QWidget):
             f"Artists: {', '.join(track_data.get('artists', []))}"
         )
 
-        if percentage and percentage >= 0:
-            self.label_current_track.setText(
-                f" *caching* {track_data.get('name')}")
+        if caching:
+            self.track_list.media_list.status_bar.showMessage(
+                f"*caching* {track_data.get('name')}")
         else:
             self.label_current_track.setText(
                 f"Title: {track_data.get('name')}"

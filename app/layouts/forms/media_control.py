@@ -2,7 +2,7 @@ from PyQt6.QtMultimedia import QMediaPlayer
 from PyQt6.QtWidgets import QWidget, QPushButton, QLabel, QHBoxLayout, QVBoxLayout, QSlider, QSplitter
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QIcon
-from app.icons import Icons
+from app.core.utils import Icons
 
 
 class MediaControl(QWidget):
@@ -101,11 +101,6 @@ class TrackControl(QWidget):
         self.button_action_next.setMaximumSize(30, 30)
         self.button_action_next.clicked.connect(self.next_track_behaviour)
 
-        self.button_download_all = QPushButton()
-        self.button_download_all.setToolTip('Download all')
-        self.button_download_all.setIcon(QIcon(Icons('web.download').str))
-        self.button_download_all.setMaximumSize(30, 30)
-
         self.volume_control = VolumeControl(self, self.grandparent)
 
         splitter = QSplitter()
@@ -121,9 +116,6 @@ class TrackControl(QWidget):
         self.layout.addWidget(
             self.button_add, alignment=Qt.AlignmentFlag.AlignLeft)
         self.layout.addWidget(self.button_similar,
-                              alignment=Qt.AlignmentFlag.AlignLeft)
-        self.layout.addWidget(splitter)
-        self.layout.addWidget(self.button_download_all,
                               alignment=Qt.AlignmentFlag.AlignLeft)
         self.layout.addWidget(splitter)
 
@@ -186,7 +178,7 @@ class TrackControl(QWidget):
 
     def media_stop(self):
         self.grandparent.media_player.stop()
-        self.grandparent.media_list.current_track_info.update_info({})
+        self.grandparent.track_list.current_track_info.update_info({})
 
     def media_playpause(self, value=None):
         if not self.grandparent.media_player.isPlaying() or value:
@@ -200,28 +192,28 @@ class TrackControl(QWidget):
             self.button_play_pause.setChecked(False)
 
     def media_next(self):
-        current_index = self.grandparent.media_list.playlist.indexFromItem(
-            self.grandparent.media_list.playlist.currentItem()
+        current_index = self.grandparent.track_list.track_list.indexFromItem(
+            self.grandparent.track_list.track_list.currentItem()
         ).row()
         next_index = current_index + 1
-        if (next_index + 1) > self.grandparent.media_list.playlist.count():
+        if (next_index + 1) > self.grandparent.track_list.track_list.count():
             next_index = 0
         self._change_track(next_index)
 
     def media_prev(self):
-        current_index = self.grandparent.media_list.playlist.indexFromItem(
-            self.grandparent.media_list.playlist.currentItem()).row()
+        current_index = self.grandparent.track_list.track_list.indexFromItem(
+            self.grandparent.track_list.track_list.currentItem()).row()
         next_index = current_index - 1
         if (next_index < 0):
-            next_index = self.grandparent.media_list.playlist.count() - 1
+            next_index = self.grandparent.track_list.track_list.count() - 1
         self._change_track(next_index)
 
     def _change_track(self, index):
         self.grandparent.media_player.stop()
-        next_item = self.grandparent.media_list.playlist.item(index)
+        next_item = self.grandparent.track_list.track_list.item(index)
         next_item.setSelected(True)
-        self.grandparent.media_list.playlist.setCurrentItem(next_item)
-        self.grandparent.media_list.handle_click(next_item)
+        self.grandparent.track_list.track_list.setCurrentItem(next_item)
+        self.grandparent.track_list.play_selected_music(next_item)
 
     def update_current_seek_position(self):
         position = self.grandparent.media_player.position() or 0

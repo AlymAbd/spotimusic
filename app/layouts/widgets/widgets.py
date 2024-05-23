@@ -1,8 +1,8 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QHBoxLayout, QSizePolicy
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
-from app.forms.other import DelimiterItemWidget
-from app.util import AlbumCover
+from app.core.utils import AlbumCover
+from .delitimer import DelimiterItemWidget
 
 
 class MultiLabelWidget(QWidget):

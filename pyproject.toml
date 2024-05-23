@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "spotimusic"
+name = "tunebin"
 version = "0.1.0"
 description = ""
 authors = ["Alym Abdullayev"]
@@ -15,6 +15,7 @@ fastapi = "^0.105.0"
 uvicorn = "^0.24.0.post1"
 pytest = "^7.4.3"
 PyQt6 = "^6.6.1"
+pydub = "^0.25.1"
 
 
 [build-system]

@@ -12,39 +12,41 @@ class Client(object):
 
     def __init__(self) -> None:
         self.init_oauth_client()
-        self.client = Spotify(auth_manager=self.spotify_oauth)
+        if (self.spotify_oauth):
+            self.client = Spotify(auth_manager=self.spotify_oauth)
 
     def init_oauth_client(self, hard_reset: bool = False):
-        from .models import Secrets
+        from app.core.entities.auth import Secrets
         from app import OAUTH_FILE_PATH
 
         if not self.spotify_oauth or hard_reset:
-            secrets = Secrets.get_first()
-            secrets = secrets.load()
+            secrets = Secrets.load()
 
-            if secrets.secret:
+            if secrets.get('secret'):
                 spotify_oauth = SpotifyOAuth(
-                    secrets.client_id,
-                    secrets.secret,
-                    secrets.redirect_uri,
-                    self.secrets.state,
+                    secrets.get('client_id'),
+                    secrets.get('secret'),
+                    secrets.get('redirect_uri'),
+                    secrets.get('state'),
+                    self.SCOPE,
+                    OAUTH_FILE_PATH,
+                    open_browser=False
+                )
+            elif secrets.get('client_id'):
+                spotify_oauth = SpotifyPKCE(
+                    secrets.get('client_id'),
+                    secrets.get('redirect_uri'),
+                    secrets.get('state'),
                     self.SCOPE,
                     OAUTH_FILE_PATH,
                     open_browser=False
                 )
             else:
-                spotify_oauth = SpotifyPKCE(
-                    secrets.client_id,
-                    secrets.redirect_uri,
-                    secrets.state,
-                    self.SCOPE,
-                    OAUTH_FILE_PATH,
-                    open_browser=False
-                )
+                return None
             self.spotify_oauth = spotify_oauth
         return self.spotify_oauth
 
-    @property
+    @ property
     def spotify(self):
         if not self.client:
             self.client = Spotify(auth_manager=self.spotify_oauth)

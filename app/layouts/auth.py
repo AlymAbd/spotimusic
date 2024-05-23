@@ -1,14 +1,10 @@
 import webbrowser
 import uvicorn
 import time
-from app import KILL_THREAD_PATH
 from datetime import datetime, timedelta
-from os import path, remove
-from PyQt6.QtWidgets import QVBoxLayout, QPushButton, QLabel
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QPushButton, QLabel,
+    QWidget, QVBoxLayout, QPushButton, QLabel
 )
-
 # minutes
 TIMEOUT = 1
 
@@ -36,8 +32,10 @@ class Auth(QWidget):
         self.layout.addWidget(self.label_auth_status)
 
     def handle_auth(self):
-        from app import client
-        from auth_server.app import Server
+        from app.core.client import Client
+        from auth_server.server import Server, ExitEvent
+
+        client = Client()
 
         self.button_login.setDisabled(True)
         # double auth check
@@ -46,28 +44,24 @@ class Auth(QWidget):
 
             timeout_time = datetime.now() + timedelta(minutes=TIMEOUT)
             config = uvicorn.Config(
-                "auth_server.app:app", host="0.0.0.0", port=6789, log_level="info")
+                "auth_server.server:app", host="localhost", port=6789, log_level="info")
             server = Server(config=config)
 
             with server.run_in_thread():
+                ExitEvent.set()
                 uri = client.spotify_oauth.get_authorize_url()
                 webbrowser.open(uri)
                 self.label_auth_status.setText(f"Timeout is :{timeout_time}")
 
-                while not path.exists(KILL_THREAD_PATH):
+                while ExitEvent.is_set():
                     if datetime.now() > timeout_time:
                         self.label_auth_status.setText(
                             "Timeout... try again...")
                         print('timeout... shutting down...')
                         break
                     time.sleep(5)
-
-                if path.exists(KILL_THREAD_PATH):
-                    remove(KILL_THREAD_PATH)
-                    self.parent.load_playlist()
-                else:
-                    self.label_auth_status.setText(
-                        "Something went wrong, please try again later")
+                ExitEvent.clear()
+                self.parent.load_playlist()
         else:
             self.parent.load_playlist()
 

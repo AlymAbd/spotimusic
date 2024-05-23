@@ -1,16 +1,17 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLabel, QLineEdit, QFormLayout, QLineEdit, QPushButton
-from app.util import random_string
-from app.models import Secrets
-from app.database.entity import Entity
+from app.core.utils import random_string
+from app.core.entities.auth import Secrets
+from app.core.base_entity import BaseEntity
 
 
 class Settings(QWidget):
     data: dict = {}
-    obj: Entity = None
+    obj: BaseEntity = None
+    form_input = None
 
     def __init__(self, parent):
         super().__init__(parent=parent)
-        self.obj = Secrets.get_first().load()
+        self.obj = Secrets.load()
         self.data = self.obj.values
 
         if not self.data.get('state'):
@@ -45,12 +46,19 @@ class Settings(QWidget):
         self.obj.set_value('secret', secret)
         self.obj.set_value('state', state)
         self.obj.save()
+        self.form_input.info_label.setText('Settings saved')
 
     def click_back(self):
         self.parent().load_page()
 
 
 class Form(QWidget):
+    input_client_id = None
+    input_secret = None
+    input_redirect_uri = None
+    input_state = None
+    info_label = None
+
     def __init__(self, parent):
         super().__init__(parent=parent)
         self.widget = QWidget(self)
@@ -76,6 +84,8 @@ class Form(QWidget):
         self.input_state.setReadOnly(True)
         self.layout.addWidget(
             self.create_labeled_input('State', self.input_state))
+
+        self.info_label = QLabel(self)
 
         self.setLayout(self.layout)
         parent.layout.addWidget(self)

@@ -2,21 +2,22 @@ from fastapi import FastAPI, Request
 import contextlib
 import time
 import threading
+from threading import Event
 import uvicorn
-from os import path
-from app import client
 from fastapi.responses import HTMLResponse
-from app import TEMP_PATH
+from app.core.client import Client
+
 
 app = FastAPI()
+ExitEvent = Event()
 
 
 @app.get("/callback")
 async def root(code: str, state: str, request: Request):
+    client = Client()
     client.spotify_oauth.parse_auth_response_url(str(request.url))
     client.spotify_oauth.get_access_token(code)
-    with open(path.join(TEMP_PATH, 'kill_thread'), 'w'):
-        pass
+    ExitEvent.clear()
 
     html_content = """
     <html>
@@ -41,9 +42,6 @@ async def root(code: str, state: str, request: Request):
 
 
 class Server(uvicorn.Server):
-    def install_signal_handlers(self):
-        pass
-
     @contextlib.contextmanager
     def run_in_thread(self):
         thread = threading.Thread(target=self.run)

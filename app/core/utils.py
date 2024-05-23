@@ -1,5 +1,5 @@
 import uuid
-from app import TEMP_PATH, RESOURCE_IMAGE_PATH
+from app import CACHE_IMAGE_PATH, RESOURCE_ICON_PATH, RESOURCE_IMAGE_PATH
 from os import path
 
 
@@ -17,11 +17,11 @@ class AlbumCover(object):
         ret = False
         if album_id:
             ret = path.isfile(
-                path.join(TEMP_PATH, 'images', album_id + '.jpg')
+                path.join(CACHE_IMAGE_PATH, album_id + '.jpg')
             )
         elif file_name:
             ret = path.isfile(
-                path.join(TEMP_PATH, 'images', file_name)
+                path.join(CACHE_IMAGE_PATH, file_name)
             )
         elif file_path:
             ret = path.isfile(file_path)
@@ -31,10 +31,23 @@ class AlbumCover(object):
     def get_path(cls, album_id, default: bool = False):
         if default:
             if cls.cover_exist(album_id=album_id):
-                ret = path.join(TEMP_PATH, 'images', album_id + '.jpg')
+                ret = path.join(CACHE_IMAGE_PATH, album_id + '.jpg')
             else:
                 ret = path.join(RESOURCE_IMAGE_PATH,
                                 'default_image_cover.jpeg')
             return ret
         else:
-            return path.join(TEMP_PATH, 'images', album_id + '.jpg')
+            return path.join(CACHE_IMAGE_PATH, album_id + '.jpg')
+
+
+class Icons(object):
+    _fpath = ''
+
+    def __init__(self, name: str) -> None:
+        folder, filename = name.split('.')
+
+        self._fpath = path.join(RESOURCE_ICON_PATH, folder, f"{filename}.svg")
+
+    @property
+    def str(self):
+        return self._fpath

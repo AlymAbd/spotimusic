@@ -1,10 +1,6 @@
 import sys
-from app.app import App
-from app.database import Migration
 from PyQt6.QtWidgets import QApplication
-
-migration = Migration()
-migration.start()
+from app.layouts.app import App
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
